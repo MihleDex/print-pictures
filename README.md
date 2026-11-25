@@ -1,6 +1,7 @@
-# print-pictures
+# LinuxPPT
+Linux gui for printing photos.
 
-The Windows "Print Pictures" window for Linux Mint XFCE: select pictures in
+`print-pictures` is the Windows "Print Pictures" window for Linux Mint XFCE: select pictures in
 Thunar, right-click, **Print**, pick a layout, **Print**. It works with any
 printer that is set up in, or found by, CUPS.
 
@@ -49,3 +50,7 @@ Layouts: `full`, `20x25`, `13x18`, `10x15`, `9x13`, `wallet`, `contact`.
   then print with part of it missing.
 - Large jobs take a while: 200 full A4 pages need about 7 minutes. Closing the
   window while it says "Printing..." abandons the job.
+
+## Licence
+
+GPL version 3; see `LICENSE`.

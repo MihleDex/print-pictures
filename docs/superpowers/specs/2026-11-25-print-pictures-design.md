@@ -116,7 +116,8 @@ type.
 
 ## Where it differs from Windows
 
-- The test PDF printer saves to `~/PDF` without asking for a file name.
+- Printing to the `PDF` printer asks where to save (see
+  `2026-11-25-save-pdf-design.md`); the `print` command still saves to `~/PDF`.
 - Layout names are metric only.
 - No "Only show options that are compatible with my printer", no "Color
   management" button, no help button.

@@ -20,11 +20,12 @@
 - Never modify the user's pictures. Never rewrite Thunar's config without a backup.
 - Run `lp`/`lpstat` with `LC_ALL=C`; pass arguments as a list, never through a shell.
 - Every task ends with `cargo test` passing and `cargo clippy --all-targets -- -D warnings` clean.
+- Checks that need clicking or typing in a window are done by your human partner: there is no input-automation tool here (`xdotool` is not installed). Prepare the files and a numbered list, and tick the box only after they report the result.
 
 ## Review Focus
 
 1. File names with spaces, non-ASCII, quotes, `%`, or a leading `-` → printed like any other (Tasks 3, 5, 9).
-2. One corrupt, missing or non-picture file among good ones → skipped and named, the rest print; none usable → message, nothing sent (Task 3).
+2. One corrupt, missing or non-picture file among good ones → skipped and named, the rest print; none usable → message, nothing sent (Task 3). This includes a picture that passes the header check and then fails to load (Tasks 3, 7). Known limit: gdk-pixbuf loads many cut-off files without an error, so those print with part missing.
 3. Hundreds of pictures selected → window opens promptly; only the visible page is decoded (Tasks 6, 7).
 4. Remembered printer no longer exists, or no printers at all → default printer is used; with none, the window opens with Print disabled and says why (Task 6).
 5. Transparent PNG → white background, never black (Task 2).
@@ -78,8 +79,8 @@ pub fn paginate(layout: LayoutId, paper: &Paper, image_count: usize, copies: u32
 ```
 All structs and enums derive `Clone, Debug, PartialEq`; geometry types and `LayoutId` also `Copy`.
 
-- [ ] **Step 1:** Ask your human partner to run `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf`. Verify: `pkg-config --modversion gtk4` prints `4.14.x` and `lpstat -v` lists `PDF`.
-- [ ] **Step 2:** `git init`; create the package with every dependency from Tech Stack, `.gitignore` containing `/target`, an empty `main`. Run `cargo build`. Expected: success.
+- [ ] **Step 1:** Ask your human partner to run `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf`. Verify: `pkg-config --modversion gtk4` prints `4.14.x` and `lpstat -v` lists `PDF`. Also verify `git var GIT_AUTHOR_IDENT` exits 0; if not, ask them to set `user.name` and `user.email` (never choose these yourself).
+- [ ] **Step 2:** `git init` (skip if already a repository) and commit `CLAUDE.md`, `docs/` and `plans/` as `docs: print pictures spec and plan`; then create the package with every dependency from Tech Stack, `.gitignore` containing `/target`, an empty `main`. Run `cargo build`. Expected: success.
 - [ ] **Step 3: Write the failing tests** in `src/layout.rs`:
 
 ```rust
@@ -144,7 +145,7 @@ pub fn add_exif_orientation(jpeg: &Path, orientation: u8);
   - `reduced_load_keeps_orientation`: 4000×2000, orientation 6, `load(p, 400, 200)` → 200×400.
   - `never_enlarges`: 40×20 with `load(p, 4000, 2000)` → 40×20.
   - `transparency_becomes_white`: fully transparent PNG → `[255,255,255]`; black at alpha 128 → each channel within 126..=129.
-  - `embedded_profile_is_converted`: build with lcms2 an RGB profile whose red and blue primaries are swapped relative to sRGB; save a pure-red PNG carrying it (pixbuf save option `icc-profile`, base64) → loaded pixel has b > 200 and r < 60.
+  - `embedded_profile_is_converted`: build with lcms2 an RGB profile whose red and blue primaries are swapped relative to sRGB; save a pure-red JPEG carrying it (pixbuf `savev` options `quality` = `95` and `icc-profile` = base64 of the profile) → loaded pixel has b > 200 and r < 60. It must be JPEG: gdk-pixbuf 2.42.10 refuses to save a PNG with an RGB profile.
   - `bad_files`: a text file named `x.jpg` → `Unsupported`; a missing path → `Unreadable`.
 - [ ] **Step 2:** `cargo test --test image_source` → FAIL.
 - [ ] **Step 3: Implement.** gdk-pixbuf only. Scale `s = max(cover_long / long, cover_short / short).min(1.0)` from `probe`; load with `from_file_at_scale`; read the `icc-profile` option *before* `apply_embedded_orientation`; convert with lcms2; composite alpha onto white; strip row padding.
@@ -173,10 +174,11 @@ pub const PRINT_DPI: u32 = 300;
 pub struct JobSpec { pub files: Vec<PathBuf>, pub layout: LayoutId, pub paper: Paper, pub copies: u32, pub fill: bool, pub sharpen: bool }
 pub struct Checked { pub usable: Vec<PathBuf>, pub rejected: Vec<(PathBuf, String)> }
 pub fn check_files(files: &[PathBuf]) -> Checked;
-pub fn build_pdf(spec: &JobSpec, out: &Path) -> Result<usize, JobError>;  // page count
-pub enum JobError { NothingToPrint, LayoutUnavailable, Picture { path: PathBuf, source: LoadError }, Pdf(String) }
+pub struct Built { pub pages: usize, pub skipped: Vec<(PathBuf, String)> } // skipped = passed the check, failed to load
+pub fn build_pdf(spec: &JobSpec, out: &Path) -> Result<Built, JobError>;
+pub enum JobError { NothingToPrint(Vec<(PathBuf, String)>), LayoutUnavailable, Pdf(String) } // the Vec lists skipped pictures
 ```
-Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copies N] [--no-fit] [--no-sharpen] -o OUT.pdf FILES...` (zero margins; rejected files listed on stderr).
+Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copies N] [--no-fit] [--no-sharpen] -o OUT.pdf FILES...` (zero margins; rejected and skipped files listed on stderr).
 
 - [ ] **Step 1: Write the failing unit tests.**
   - `fit(300, 200, slot{x:10,y:10,w:90,h:130}, true)` → `turn`, image `{10, 7.5, 90, 135}`, clip = slot.
@@ -184,14 +186,27 @@ Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copie
   - Square picture is never turned. A 4000×400 picture with `false` lies wholly inside the slot.
   - `sharpen`: uniform grey unchanged; across a 100|200 step the dark side goes below 100 and the light side above 200.
 - [ ] **Step 2: Write the failing PDF tests** (`tests/render.rs`). Add helper `raster_pdf(pdf: &Path, page: u32, dpi: u32) -> Raster` running `pdftoppm` and parsing its PPM; use 127 dpi = 5 px/mm.
-  - `sizes_and_pages`: 3 solid pictures, 13x18, A4 → returns 2; `pdfinfo` shows `Pages: 2` and A4 (595.x × 841.x pts); each slot centre has its picture's colour; pixel at 2 mm,2 mm is white.
+  - `sizes_and_pages`: 3 solid pictures, 13x18, A4 → returns `pages == 2`; `pdfinfo` shows `Pages: 2` and A4 (595.x × 841.x pts); each slot centre has its picture's colour; pixel at 2 mm,2 mm is white.
   - `quarter_turn_direction`: landscape left-red/right-blue picture into 9x13 → top of the first slot red, bottom blue (turn is clockwise).
   - `awkward_names`: a file named `-Ünï "quoted" 100%.png` renders.
-  - `bad_files_are_skipped`: `check_files([good, text-as-jpg, missing])` → 1 usable, 2 rejected with those paths; `build_pdf` with no files → `NothingToPrint` and no output file.
+  - `bad_files_are_skipped`: `check_files([good, text-as-jpg, missing])` → 1 usable, 2 rejected with those paths; `build_pdf` with no files → `NothingToPrint` with an empty list and no output file.
+  - `damaged_body_is_skipped`: write a 200×200 PNG with varied pixels; keep it up to and including the 16 bytes that follow `IDAT`, and set every later byte to zero. Assert first that `check_files` lists it as usable and `load` returns an error. Then `build_pdf` of `[good, damaged, good]` at 13x18 → `pages == 1`, `skipped` names only the damaged file, output exists. `build_pdf` of `[damaged]` → `NothingToPrint` listing it, and no output file.
 - [ ] **Step 3:** `cargo test` → FAIL.
-- [ ] **Step 4: Implement.** Fit scale is `max` (fill) or `min` (fit) of the slot/picture ratios after any turn, centred. Sharpen: `v + 0.5 * (v - mean3x3)`, clamped. Draw via a cairo `Rgb24` surface (BGRX in memory). `build_pdf` decodes one picture at a time at `PRINT_DPI` for its slot, writes to a temporary file beside `out` and renames on success. Contact sheet slots use `split_caption` with the file name. `check_files` uses `probe`.
-- [ ] **Step 5:** `cargo test` → PASS. Run `cargo run -- render --layout wallet -o /tmp/w.pdf <a few pictures>` and look at the result.
-- [ ] **Step 6:** Commit `feat: render pictures to PDF`.
+- [ ] **Step 4: Implement.** Fit scale is `max` (fill) or `min` (fit) of the slot/picture ratios after any turn, centred. Sharpen: `v + 0.5 * (v - mean3x3)`, clamped. Draw via a cairo `Rgb24` surface (BGRX in memory). `build_pdf` decodes one picture at a time at `PRINT_DPI` for its slot, writes to a temporary file beside `out` and renames on success. Contact sheet slots use `split_caption` with the file name. `check_files` uses `probe`. When a picture fails to load, `build_pdf` removes that file from its list, records it in `skipped` and builds again from the start, so no slot is left blank (add `// shortcut: one rebuild per damaged picture; fine while they are rare`). If none remain, return `NothingToPrint(skipped)`.
+- [ ] **Step 5:** `cargo test` → PASS.
+- [ ] **Step 6: Early look (Human check).** Ask your human partner for a few of their own pictures, then render every layout:
+  `mkdir -p target/layout-check && for l in full 20x25 13x18 10x15 9x13 wallet contact; do cargo run -- render --layout $l -o target/layout-check/$l.pdf <pictures>; done`
+  Also render one layout with `--no-sharpen`. Ask them to compare with what they remember (holding a printed page against a frame if they can): picture sizes, metric captions such as "13 x 18 cm (2)", file names on the contact sheet, sharpening on by default. Record each answer under "Not yet confirmed" in the spec. If a size or caption changes, update the spec's layout table and Task 1's tests before going on.
+- [ ] **Step 7: Measure a big job.** Run:
+  ```sh
+  mkdir -p target/timing
+  i=0; while [ $i -lt 200 ]; do for f in /usr/share/backgrounds/*/*.jpg; do [ $i -lt 200 ] || break; i=$((i+1)); ln -sf "$f" target/timing/$i.jpg; done; done
+  cargo build --release
+  time target/release/print-pictures render --layout full -o target/timing/big.pdf target/timing/*.jpg
+  ls -lh target/timing/big.pdf
+  ```
+  Tell your human partner both numbers (the estimate beforehand was about 2.4 GB). Do not change how pictures are embedded without their decision. Then `rm -r target/timing`.
+- [ ] **Step 8:** Commit `feat: render pictures to PDF`.
 
 ---
 
@@ -246,7 +261,7 @@ pub fn lp_args(req: &SubmitRequest, pdf: &Path) -> Vec<OsString>;
 pub fn parse_job_id(stdout: &str) -> Option<String>;
 pub fn submit(req: &SubmitRequest, pdf: &Path) -> Result<String, PrintError>; // job id; error carries lp's stderr
 ```
-Command: `print-pictures print --printer NAME --layout <id> [--paper ID] [--copies N] [--no-fit] [--no-sharpen] [-o KEY=VALUE]... FILES...`
+Command: `print-pictures print --printer NAME --layout <id> [--paper ID] [--copies N] [--no-fit] [--no-sharpen] [-o KEY=VALUE]... FILES...` (rejected and skipped files listed on stderr).
 
 - [ ] **Step 1: Write the failing tests.**
   - `lp_args` for printer `PDF`, paper `A4`, option `MediaType=Glossy` equals exactly
@@ -334,9 +349,9 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
   - Preview draws the white page with `render` functions; when `turn_view`, the page is shown landscape with the picture upright. "◀ Page n of m ▶" below.
   - Pictures decode off the UI thread (`gio::spawn_blocking`), only `visible_images()`; others are dropped from the cache; stale results are discarded; a grey placeholder shows meanwhile.
   - Notice text appears above the bottom row when present.
-  - Print: disable controls, show "Printing...", build to a temporary PDF and submit off the UI thread; success saves settings and closes; failure shows the message and keeps the window open.
+  - Print: disable controls, show "Printing...", build to a temporary PDF and submit off the UI thread; success saves settings and closes; failure shows the message and keeps the window open. If `build_pdf` skipped pictures, success first shows a `gtk4::AlertDialog` reading `Skipped: <file names>` and closes the window when it is dismissed. `NothingToPrint` with a non-empty list shows the same text.
   - Enter prints, Escape cancels, Left/Right page.
-- [ ] **Step 3: Verify on screen.** `cargo run -- <12 pictures, including a portrait phone photo>`; capture with `xfce4-screenshooter -w -s <file.png>` and compare with the spec sketch. Then check every layout, both fit states, paging, copies = 3, printing to `PDF` (preview must match the file in `~/PDF`), a run with one bad file, and a run with 200+ pictures (window visible in about a second).
+- [ ] **Step 3: Verify on screen (Human check).** You: start `cargo run -- <12 pictures, including a portrait phone photo>` in the background, bring it forward with `wmctrl -a "Print Pictures"`, capture it with `xfce4-screenshooter -w -s <file.png>` and compare with the spec sketch. Your human partner: check every layout, both fit states, paging, copies = 3, printing to `PDF` (preview must match the file in `~/PDF`), a run with one bad file, and a run with 200+ pictures (window visible in about a second).
 - [ ] **Step 4:** Ask your human partner to try it and say what differs from what they remember.
 - [ ] **Step 5:** Commit `feat: print pictures window`.
 
@@ -351,7 +366,7 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
 
 - [ ] **Step 1:** Write a failing model test: with the fixture caps, `advanced_options()` contains `ColorModel` but neither `MediaType` nor `cupsPrintQuality`; setting `ColorModel` shows in `job()`. Make it pass.
 - [ ] **Step 2:** "Options..." opens modal "Print Settings" with "Sharpen for printing" and "Printer Properties..." (a second modal listing each advanced option as label + dropdown). OK applies; Cancel and Escape discard.
-- [ ] **Step 3:** Verify with `PDF`: change a property, OK, reopen (kept); Cancel discards; after printing and restarting it is remembered.
+- [ ] **Step 3 (Human check):** Verify with `PDF`: change a property, OK, reopen (kept); Cancel discards; after printing and restarting it is remembered.
 - [ ] **Step 4:** Commit `feat: print settings`.
 
 ---
@@ -369,7 +384,7 @@ pub fn desktop_entry(exe: &Path) -> String;
 pub fn install(home: &Path, exe: &Path, system_uca: &Path) -> Result<(), InstallError>;
 pub fn uninstall(home: &Path) -> Result<(), InstallError>;
 ```
-Action: `unique-id` `print-pictures-1`, `icon` `printer`, `name` `Print`, `command` `"<exe>" %F`, `patterns` `*`, only `<image-files/>`. Binary goes to `~/.local/bin/print-pictures`; desktop entry (MimeType for the spec's formats, `Exec="<exe>" %F`) to `~/.local/share/applications/print-pictures.desktop`. Backup: `uca.xml.print-pictures.bak`.
+Action: `unique-id` `print-pictures-1`, `icon` `printer`, `name` `Print`, `command` `"<exe>" %F`, `patterns` `*`, only `<image-files/>`. Binary goes to `~/.local/bin/print-pictures`; desktop entry (MimeType for the spec's formats, `Exec="<exe>" %F`) to `~/.local/share/applications/print-pictures.desktop`. Backup: `uca.xml.print-pictures.bak`. Whenever `install` or `uninstall` would change `uca.xml`, first copy the current file to the backup (nothing to copy if there is no user file yet). If the new text equals the current text, write neither file, so a second `install` leaves the first backup alone.
 
 - [ ] **Step 1: Write the failing tests** with a two-action fixture.
   - `add_action` keeps both existing actions byte for byte and adds ours with `<image-files/>`.
@@ -377,9 +392,10 @@ Action: `unique-id` `print-pictures-1`, `icon` `printer`, `name` `Print`, `comma
   - An exe path containing a space and `&` is quoted and XML-escaped.
   - XML without `</actions>` → error, and `install` writes nothing.
   - `install` into a temporary home: binary copied, backup equals the original; with no user `uca.xml` it starts from `system_uca`.
+  - Running `install` twice: the backup still equals the original, pre-install `uca.xml`.
 - [ ] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement (text insertion before `</actions>`) and the `install` / `uninstall` commands. **Step 4:** `cargo test` → PASS.
 - [ ] **Step 5:** README: required packages, `cargo run --release -- install`, `thunar -q`, uninstall.
-- [ ] **Step 6: Acceptance.** Install, `thunar -q`, reopen Thunar. Select three pictures with spaces in their names → right-click shows "Print" → window lists all three → print to `PDF` → file appears in `~/PDF`. "Print" is absent for a text file. Existing Thunar actions still work. Try a HEIC photo if one is available and record the result.
+- [ ] **Step 6: Acceptance (Human check).** Ask first: installing changes their Thunar menu and `thunar -q` closes their open Thunar windows. You: install and run `thunar -q`. Your human partner: reopen Thunar and do the rest. Select three pictures with spaces in their names → right-click shows "Print" → window lists all three → print to `PDF` → file appears in `~/PDF`. "Print" is absent for a text file. Existing Thunar actions still work. Try a HEIC photo if one is available and record the result.
 - [ ] **Step 7:** Commit `feat: Thunar integration`.
 
 ---

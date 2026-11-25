@@ -8,13 +8,13 @@ from the amended build plan.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| [001](001-amend-implementation-plan.md) | Amend the implementation plan | P1 | S | — | TODO |
+| [001](001-amend-implementation-plan.md) | Amend the implementation plan | P1 | S | — | DONE |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (reason)
 
 ## Before building (the user's own steps)
 
-- `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf` (not yet
+- Done: `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf` (checked
   installed on 2026-11-25).
 
 ## Findings not planned

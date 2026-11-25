@@ -2,6 +2,7 @@
 
 mod layout_list;
 pub mod model;
+pub mod options;
 pub mod preview;
 mod window;
 

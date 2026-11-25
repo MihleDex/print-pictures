@@ -1,6 +1,7 @@
 //! The Print Pictures window: widgets over `Model`.
 
 use super::layout_list;
+use super::options;
 use super::preview::{self, Cache};
 use crate::cups::{self, Printer, SubmitRequest, job_title};
 use crate::image_source::load;
@@ -37,14 +38,14 @@ fn print_job(
 }
 
 /// A titled dropdown that shows labels and reports ids.
-struct Choice {
-    holder: gtk::Box,
+pub(super) struct Picker {
+    pub(super) holder: gtk::Box,
     dropdown: gtk::DropDown,
     items: RefCell<Vec<(String, String)>>,
 }
 
-impl Choice {
-    fn new(title: &str) -> Choice {
+impl Picker {
+    pub(super) fn new(title: &str) -> Picker {
         let dropdown = gtk::DropDown::from_strings(&[]);
         // Long printer and paper names must not widen the window.
         let short = gtk::SignalListItemFactory::new();
@@ -76,7 +77,7 @@ impl Choice {
         holder.set_hexpand(true);
         holder.append(&label);
         holder.append(&dropdown);
-        Choice {
+        Picker {
             holder,
             dropdown,
             items: RefCell::new(Vec::new()),
@@ -84,7 +85,7 @@ impl Choice {
     }
 
     /// `items` are (id, label) pairs.
-    fn show(&self, items: Vec<(String, String)>, selected: Option<&str>) {
+    pub(super) fn show(&self, items: Vec<(String, String)>, selected: Option<&str>) {
         if *self.items.borrow() != items {
             let labels: Vec<&str> = items.iter().map(|(_, label)| label.as_str()).collect();
             self.dropdown
@@ -96,7 +97,7 @@ impl Choice {
             .set_selected(position.map_or(gtk::INVALID_LIST_POSITION, |p| p as u32));
     }
 
-    fn selected_id(&self) -> Option<String> {
+    pub(super) fn selected_id(&self) -> Option<String> {
         let at = self.dropdown.selected() as usize;
         self.items.borrow().get(at).map(|(id, _)| id.clone())
     }
@@ -118,10 +119,10 @@ struct Widgets {
     window: gtk::ApplicationWindow,
     /// Everything that is locked while loading or printing.
     body: gtk::Box,
-    printer: Choice,
-    paper: Choice,
-    quality: Choice,
-    paper_type: Choice,
+    printer: Picker,
+    paper: Picker,
+    quality: Picker,
+    paper_type: Picker,
     preview: gtk::DrawingArea,
     previous: gtk::Button,
     next: gtk::Button,
@@ -130,7 +131,6 @@ struct Widgets {
     notice: gtk::Label,
     copies: gtk::SpinButton,
     fill: gtk::CheckButton,
-    #[allow(dead_code)] // wired to Print Settings in Task 8
     options: gtk::Button,
     spinner: gtk::Spinner,
     status: gtk::Label,
@@ -167,10 +167,10 @@ fn build(app: &gtk::Application) -> Widgets {
         .css_classes(["title-4"])
         .build();
 
-    let printer = Choice::new("Printer:");
-    let paper = Choice::new("Paper size:");
-    let quality = Choice::new("Quality:");
-    let paper_type = Choice::new("Paper type:");
+    let printer = Picker::new("Printer:");
+    let paper = Picker::new("Paper size:");
+    let quality = Picker::new("Quality:");
+    let paper_type = Picker::new("Paper type:");
     let choices = row(8);
     for choice in [&printer, &paper, &quality, &paper_type] {
         choices.append(&choice.holder);
@@ -324,7 +324,7 @@ fn reveal(layouts: &gtk::ListBox, row: gtk::ListBoxRow) {
 
 struct Dialog {
     ui: Widgets,
-    model: RefCell<Model>,
+    model: Rc<RefCell<Model>>,
     capabilities: Rc<RefCell<HashMap<String, PrinterCaps>>>,
     pictures: RefCell<Cache>,
     /// The layout rows on screen, to rebuild them only when they change.
@@ -357,7 +357,7 @@ impl Dialog {
         let model = Model::new(loaded.checked, printers, Box::new(caps_of), loaded.settings);
         Rc::new(Dialog {
             ui,
-            model: RefCell::new(model),
+            model: Rc::new(RefCell::new(model)),
             capabilities,
             pictures: RefCell::new(Cache::default()),
             listed: RefCell::new((Vec::new(), None)),
@@ -620,6 +620,15 @@ impl Dialog {
             .connect_clicked(move |_| d.change(Model::prev_page));
         let d = me();
         ui.next.connect_clicked(move |_| d.change(Model::next_page));
+        let d = me();
+        ui.options.connect_clicked(move |_| {
+            let refresh = d.clone();
+            options::show_print_settings(
+                d.ui.window.upcast_ref(),
+                d.model.clone(),
+                Rc::new(move || refresh.refresh()),
+            );
+        });
         let d = me();
         ui.print.connect_clicked(move |_| d.print());
         let d = me();

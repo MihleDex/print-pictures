@@ -364,10 +364,10 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
 **Interfaces — Consumes:** `Model::{sharpen, set_sharpen, advanced_options, option_value, set_option}`.
 **Produces:** `pub fn show_print_settings(parent: &gtk4::Window, model: Rc<RefCell<Model>>, on_change: Rc<dyn Fn()>);`
 
-- [ ] **Step 1:** Write a failing model test: with the fixture caps, `advanced_options()` contains `ColorModel` but neither `MediaType` nor `cupsPrintQuality`; setting `ColorModel` shows in `job()`. Make it pass.
-- [ ] **Step 2:** "Options..." opens modal "Print Settings" with "Sharpen for printing" and "Printer Properties..." (a second modal listing each advanced option as label + dropdown). OK applies; Cancel and Escape discard.
+- [x] **Step 1:** Write a failing model test: with the fixture caps, `advanced_options()` contains `ColorModel` but neither `MediaType` nor `cupsPrintQuality`; setting `ColorModel` shows in `job()`. Make it pass.
+- [x] **Step 2:** "Options..." opens modal "Print Settings" with "Sharpen for printing" and "Printer Properties..." (a second modal listing each advanced option as label + dropdown). OK applies; Cancel and Escape discard.
 - [ ] **Step 3 (Human check):** Verify with `PDF`: change a property, OK, reopen (kept); Cancel discards; after printing and restarting it is remembered.
-- [ ] **Step 4:** Commit `feat: print settings`.
+- [x] **Step 4:** Commit `feat: print settings`.
 
 ---
 

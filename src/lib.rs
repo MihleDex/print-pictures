@@ -1,5 +1,6 @@
 pub mod cups;
 pub mod image_source;
+pub mod integration;
 pub mod job;
 pub mod layout;
 pub mod ppd;

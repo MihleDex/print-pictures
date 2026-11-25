@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use print_pictures::cups::{self, SubmitRequest};
+use print_pictures::integration;
 use print_pictures::job::{JobError, JobSpec, build_pdf, check_files};
 use print_pictures::layout::{LayoutId, Margins, Paper, SizeMm};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 #[derive(Parser)]
@@ -20,6 +21,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Add "Print" to Thunar's right-click menu for pictures
+    Install,
+    /// Remove it again
+    Uninstall,
     /// List the printers and what each one offers
     Printers,
     /// Print without opening the window
@@ -178,12 +183,42 @@ fn print(
     Ok(format!("{pages} page(s) sent as job {job_id}"))
 }
 
+fn set_up(remove: bool) -> ExitCode {
+    let Some(home) = std::env::var_os("HOME").map(PathBuf::from) else {
+        eprintln!("HOME is not set");
+        return ExitCode::FAILURE;
+    };
+    let result = if remove {
+        integration::uninstall(&home).map_err(|e| e.to_string())
+    } else {
+        std::env::current_exe()
+            .map_err(|e| e.to_string())
+            .and_then(|exe| {
+                let system = Path::new("/etc/xdg/Thunar/uca.xml");
+                integration::install(&home, &exe, system).map_err(|e| e.to_string())
+            })
+    };
+    if let Err(e) = result {
+        eprintln!("{e}");
+        return ExitCode::FAILURE;
+    }
+    // So that "Open With" learns about the desktop entry, or forgets it.
+    let _ = std::process::Command::new("update-desktop-database")
+        .arg(home.join(".local/share/applications"))
+        .status();
+    let done = if remove { "Removed." } else { "Installed." };
+    println!("{done} Close Thunar with `thunar -q`, then open it again.");
+    ExitCode::SUCCESS
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let Some(command) = cli.command else {
         return ExitCode::from(print_pictures::ui::run(cli.files).get());
     };
     match command {
+        Command::Install => set_up(false),
+        Command::Uninstall => set_up(true),
         Command::Printers => list_printers(),
         Command::Print {
             job,

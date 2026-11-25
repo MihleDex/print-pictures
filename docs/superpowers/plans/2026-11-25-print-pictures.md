@@ -386,17 +386,17 @@ pub fn uninstall(home: &Path) -> Result<(), InstallError>;
 ```
 Action: `unique-id` `print-pictures-1`, `icon` `printer`, `name` `Print`, `command` `"<exe>" %F`, `patterns` `*`, only `<image-files/>`. Binary goes to `~/.local/bin/print-pictures`; desktop entry (MimeType for the spec's formats, `Exec="<exe>" %F`) to `~/.local/share/applications/print-pictures.desktop`. Backup: `uca.xml.print-pictures.bak`. Whenever `install` or `uninstall` would change `uca.xml`, first copy the current file to the backup (nothing to copy if there is no user file yet). If the new text equals the current text, write neither file, so a second `install` leaves the first backup alone.
 
-- [ ] **Step 1: Write the failing tests** with a two-action fixture.
+- [x] **Step 1: Write the failing tests** with a two-action fixture.
   - `add_action` keeps both existing actions byte for byte and adds ours with `<image-files/>`.
   - Adding twice equals adding once; `remove_action` restores the original.
   - An exe path containing a space and `&` is quoted and XML-escaped.
   - XML without `</actions>` → error, and `install` writes nothing.
   - `install` into a temporary home: binary copied, backup equals the original; with no user `uca.xml` it starts from `system_uca`.
   - Running `install` twice: the backup still equals the original, pre-install `uca.xml`.
-- [ ] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement (text insertion before `</actions>`) and the `install` / `uninstall` commands. **Step 4:** `cargo test` → PASS.
-- [ ] **Step 5:** README: required packages, `cargo run --release -- install`, `thunar -q`, uninstall.
+- [x] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement (text insertion before `</actions>`) and the `install` / `uninstall` commands. **Step 4:** `cargo test` → PASS.
+- [x] **Step 5:** README: required packages, `cargo run --release -- install`, `thunar -q`, uninstall.
 - [ ] **Step 6: Acceptance (Human check).** Ask first: installing changes their Thunar menu and `thunar -q` closes their open Thunar windows. You: install and run `thunar -q`. Your human partner: reopen Thunar and do the rest. Select three pictures with spaces in their names → right-click shows "Print" → window lists all three → print to `PDF` → file appears in `~/PDF`. "Print" is absent for a text file. Existing Thunar actions still work. Try a HEIC photo if one is available and record the result.
-- [ ] **Step 7:** Commit `feat: Thunar integration`.
+- [x] **Step 7:** Commit `feat: Thunar integration`.
 
 ---
 

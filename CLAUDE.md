@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-As of 2026-11-25, Tasks 1–3 of the plan are built on branch `print-pictures`: layout, picture loading, drawing, PDF building and the `render` command. The window, printing, `printers`, `print` and `install` are not built yet, so anything below about them describes what the plan will create. Update this file as the code lands and where it diverges from the plan.
+As of 2026-11-25 all nine tasks of the plan are coded on branch `print-pictures`. Still open: the user's hands-on checks of the window (Task 7) and settings dialogs (Task 8), installing into their Thunar (Task 9 Step 6), the final review, and printing on real hardware.
+
+- `docs/superpowers/specs/2026-11-25-print-pictures-design.md`: what to build and why, including what the user has confirmed.
+- `docs/superpowers/plans/2026-11-25-print-pictures.md`: the nine tasks; unticked boxes are what is left.
 
 Known limit: gdk-pixbuf loads many cut-off picture files without an error, so they print with part missing.
-
-- `docs/superpowers/specs/2026-11-25-print-pictures-design.md`: what to build and why. Its "Approaches" and "Not yet confirmed" sections are assumptions the user has not agreed to.
-- `docs/superpowers/plans/2026-11-25-print-pictures.md`: nine tasks with interfaces, tests and exact constraints. Execute it with `superpowers:subagent-driven-development` or `superpowers:executing-plans`, ticking its checkboxes.
 
 ## The product
 
@@ -36,6 +36,8 @@ cargo test
 cargo test a4_counts_match_windows          # one test, by name
 cargo test --test render                    # one integration test file
 cargo clippy --all-targets -- -D warnings
+cargo test --lib -- --ignored dialogs       # opens the settings dialogs; needs a display
+cargo test --release --test drivers -- --ignored --nocapture   # parses installed drivers, ~12 min
 
 cargo run -- FILES...                       # open the window
 cargo run -- render --layout wallet -o out.pdf FILES...   # PDF only, no printer needed
@@ -71,6 +73,7 @@ The crate is a library plus a thin `main.rs`. One job flows through it like this
 - UI strings, layout sizes and A4 counts must match the plan's Global Constraints and the spec's layout table exactly.
 - Never modify the user's pictures. Never rewrite Thunar's config without a backup.
 - No network access beyond the local CUPS server. No libadwaita.
+- The user requires it to work on any printer: never special-case one model. A network printer found but not set up gets its queue from `lpoptions -p NAME -l` before its PPD is fetched; that path has not been tried against real hardware.
 - Decoding, PDF building and submission stay off the UI thread, and only the visible page is decoded.
 
 ## Cases to keep working

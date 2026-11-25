@@ -19,10 +19,9 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (reason) | REJECTED (reason)
 
 ## Findings not planned
 
-- Embed JPEG data to shrink big jobs: waits for the measurement plan 001 adds.
+- Embed JPEG data to shrink big jobs: rejected by the user, 2026-11-25.
 - Detect cut-off picture files: gdk-pixbuf loads most of them without an error.
-- Get the work printer's make and model early: a question for the user, not a
-  code change.
+- Work printer make and model: answered, the app must work on any printer.
 
 ## Checked and fine
 

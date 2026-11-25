@@ -194,7 +194,7 @@ Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copie
 - [x] **Step 3:** `cargo test` → FAIL.
 - [x] **Step 4: Implement.** Fit scale is `max` (fill) or `min` (fit) of the slot/picture ratios after any turn, centred. Sharpen: `v + 0.5 * (v - mean3x3)`, clamped. Draw via a cairo `Rgb24` surface (BGRX in memory). `build_pdf` decodes one picture at a time at `PRINT_DPI` for its slot, writes to a temporary file beside `out` and renames on success. Contact sheet slots use `split_caption` with the file name. `check_files` uses `probe`. When a picture fails to load, `build_pdf` removes that file from its list, records it in `skipped` and builds again from the start, so no slot is left blank (add `// shortcut: one rebuild per damaged picture; fine while they are rare`). If none remain, return `NothingToPrint(skipped)`.
 - [x] **Step 5:** `cargo test` → PASS.
-- [ ] **Step 6: Early look (Human check).** Ask your human partner for a few of their own pictures, then render every layout:
+- [x] **Step 6: Early look (Human check).** Ask your human partner for a few of their own pictures, then render every layout:
   `mkdir -p target/layout-check && for l in full 20x25 13x18 10x15 9x13 wallet contact; do cargo run -- render --layout $l -o target/layout-check/$l.pdf <pictures>; done`
   Also render one layout with `--no-sharpen`. Ask them to compare with what they remember (holding a printed page against a frame if they can): picture sizes, metric captions such as "13 x 18 cm (2)", file names on the contact sheet, sharpening on by default. Record each answer under "Not yet confirmed" in the spec. If a size or caption changes, update the spec's layout table and Task 1's tests before going on.
 - [x] **Step 7: Measure a big job.** Run:

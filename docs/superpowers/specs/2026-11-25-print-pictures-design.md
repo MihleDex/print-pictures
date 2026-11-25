@@ -137,11 +137,18 @@ type.
 GTK3 would match XFCE more closely, but its Rust bindings are no longer
 maintained.
 
+## Confirmed by the user (2026-11-25)
+
+- After being given rendered sample pages: "The layouts are fine" (picture
+  sizes, metric captions, file names on contact sheets, sharpening on by
+  default).
+- Pictures stay losslessly embedded in the PDF. No JPEG re-compression, although
+  200 full A4 pages take about 7 minutes and 1.3 GB.
+- "This app should be able to work on any printer." Nothing may be tailored to
+  one printer.
+
 ## Not yet confirmed
 
-- Windows' exact frame measurements. We use the captioned sizes; if your
-  frames or old prints differ by a millimetre or two, the table is one edit.
-- Metric versus inch captions, file names on contact sheets, and sharpening on
-  by default all come from reports or memory.
-- The work printer is unknown. Its driver decides paper types, quality
-  choices, margins and borderless sizes.
+- Nothing has been printed on paper, so sizes have not been measured there.
+- Each printer's driver decides paper types, quality choices, margins and
+  borderless sizes.

@@ -43,7 +43,7 @@ tests/packaging.rs        checks the data files (new)
 
 ### Task 1: User folders and the Thunar action on its own
 
-**Files:** Modify `src/integration.rs`, `src/main.rs`.
+**Files:** Modify `src/integration.rs`, `src/main.rs`, `src/settings.rs`.
 
 **Interfaces — Produces:**
 ```rust
@@ -55,11 +55,13 @@ pub fn has_thunar(config: &Path) -> bool; // our action is present
 pub fn install(folders: &Folders, exe: &Path, system_uca: &Path) -> Result<(), InstallError>;
 pub fn uninstall(folders: &Folders) -> Result<(), InstallError>;
 ```
+`Settings::default_path` takes its config folder from `Folders`, so the XDG rule exists once. A program under `/usr` (the package) is never copied: `install` then only adds the Thunar action pointing at it, and `uninstall` only removes that action. The `install` help says: Add "Print" to Thunar's right-click menu; from a source build, also install the program for this user.
 `config` is `$XDG_CONFIG_HOME` (else `~/.config`), `data` is `$XDG_DATA_HOME` (else `~/.local/share`), a relative or empty value being ignored; `bin` is `~/.local/bin`.
 
 - [ ] **Step 1: Write the failing tests** (adapt the existing `Home` helper to `Folders`):
   - `folders_follow_xdg`: `new("/home/u", Some("/x/c"), None)` → config `/x/c`, data `/home/u/.local/share`, bin `/home/u/.local/bin`; `Some("rel")` and `Some("")` give the defaults.
   - `thunar_alone`: `add_thunar` creates or changes only `Thunar/uca.xml` (no binary, no desktop entry); `has_thunar` false → true → false across add and `remove_thunar`; the backup rule of the existing tests still holds.
+  - `a_packaged_program_is_not_copied`: `install` with exe `/usr/bin/print-pictures` writes only `uca.xml`, whose command is that path; there is no copy in `bin` and no desktop entry; `uninstall` with the same folders removes the action and leaves any file already in `bin`.
 - [ ] **Step 2:** `cargo test integration` → FAIL.
 - [ ] **Step 3: Implement.** `install` and `uninstall` call `add_thunar` / `remove_thunar`; remove the `shortcut:` comment about XDG.
 - [ ] **Step 4:** `cargo test` and clippy → PASS.
@@ -207,7 +209,7 @@ The `.desktop` entry: `Name=Print Pictures`, `Exec=print-pictures %F`, `Icon=io.
 **Files:** Create `.github/workflows/ci.yml`, `.github/workflows/release.yml`.
 
 - [ ] **Step 1: `ci.yml`** on push and pull request, `runs-on: ubuntu-24.04`: install `libgtk-4-dev liblcms2-dev poppler-utils cups cups-client desktop-file-utils appstream`; `sudo systemctl start cups` (two tests need it); stable Rust; `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `cargo test`; the two validators from Task 4.
-- [ ] **Step 2: `release.yml`** on tags `v*`, `permissions: contents: write`: same setup and tests; `cargo install cargo-deb --locked`; `cargo deb`; for each of `debian:13` and `ubuntu:26.04`, `docker run --rm -v "$PWD/target/debian:/d" IMAGE sh -c "apt-get update && apt-get install -y /d/*.deb && print-pictures --version"`; `sha256sum` into `SHA256SUMS`; `gh release create "$GITHUB_REF_NAME" target/debian/*.deb SHA256SUMS --prerelease --generate-notes` with `GH_TOKEN: ${{ github.token }}`.
+- [ ] **Step 2: `release.yml`** on tags `v*`, `permissions: contents: write`: same setup and tests; `cargo install cargo-deb --locked`; `cargo deb`; for each of `debian:13` and `ubuntu:26.04`, `docker run --rm -v "$PWD/target/debian:/d" IMAGE sh -c "apt-get update && apt-get install -y /d/*.deb && print-pictures --version && ! dpkg -l caja nautilus nemo dolphin thunar 2>/dev/null | grep -q '^ii'"` (the last part fails if a file manager was pulled in); `cd target/debian && sha256sum *.deb > SHA256SUMS`, so the file names carry no folder; `gh release create "$GITHUB_REF_NAME" target/debian/*.deb target/debian/SHA256SUMS --prerelease --generate-notes` with `GH_TOKEN: ${{ github.token }}`.
 - [ ] **Step 3:** Commit `ci: build, test and release`.
 - [ ] **Step 4:** With the user's OK, push; the CI run on GitHub is green. If it is not, fix the cause and push again.
 
@@ -233,11 +235,11 @@ README headings, in order: "What it does", "Download and install", "How to use i
 
 ### Task 7: Tidy the public repository
 
-**Files:** Create `docs/design.md`; modify `CLAUDE.md`; delete `docs/superpowers/`, `plans/`.
+**Files:** Create `docs/design.md`, `docs/release-checks.md`; modify `CLAUDE.md`; delete `docs/superpowers/`, `plans/`.
 
 - [ ] **Step 1:** `docs/design.md`: under 80 lines — what the app is for, the layout table, the printing and file-manager decisions, known limits. No quotes.
 - [ ] **Step 2:** `CLAUDE.md`: keep commands, architecture, rules and cases; paraphrase quotes; point to `docs/design.md`.
-- [ ] **Step 3:** `git rm -r docs/superpowers plans` (they remain in history).
+- [ ] **Step 3:** Write `docs/release-checks.md` with every check still open, so deleting the plans loses none: the window checks (first plan Task 7 Steps 3–4), the Options check (Task 8 Step 3), the Thunar check (Task 9 Step 6), measuring on a real printer, the Save As check (save-PDF plan Task 2 Step 8) and Task 8 below, each spelled out. Then `git rm -r docs/superpowers plans` (they remain in history).
 - [ ] **Step 4:** Verify: `git grep -n 'superpowers\|"i just want\|This app should\|when printng' -- .` → nothing.
 - [ ] **Step 5:** Commit `docs: remove planning notes from the tree`.
 - [ ] **Step 6:** Ask the user: push; delete the old `print-pictures` branch on GitHub; set the description "Print photos in standard sizes on Linux, like Windows' Print Pictures" and topics `linux gtk4 printing photos linux-mint ubuntu` on the website.
@@ -247,6 +249,6 @@ README headings, in order: "What it does", "Download and install", "How to use i
 ### Task 8: Release checks and the first preview
 
 - [ ] **Step 1 (Human check):** On the user's printer, print 10 x 15 (or 4 x 6) and Wallet and measure with a ruler: within 1 mm.
-- [ ] **Step 2 (Human check):** Finish the open checks of the earlier plans.
+- [ ] **Step 2 (Human check):** Finish every check in `docs/release-checks.md`.
 - [ ] **Step 3 (Human check):** The user installs virtual machine software (`sudo apt install virt-manager`) and, in Linux Mint Cinnamon, Ubuntu (or Zorin) and Kubuntu: double-click the `.deb`; select pictures → right-click → "Print" appears (not for a text file); a name with spaces works; "Save As" for a PDF printer; remove the package. Record each result; fix failures before Step 4.
 - [ ] **Step 4:** With the user's OK: `git tag v0.1.0 && git push origin v0.1.0`. The release page shows the `.deb` and `SHA256SUMS`, marked pre-release; download it and check `sha256sum -c SHA256SUMS`.

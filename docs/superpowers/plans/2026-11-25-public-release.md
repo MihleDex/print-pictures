@@ -226,10 +226,10 @@ README headings, in order: "What it does", "Download and install", "How to use i
 - "Remove it": on Xfce press "Remove Print from the right-click menu" before removing the package.
 - The problem form requires: system and version, file manager, printer model, output of `print-pictures printers`.
 
-- [ ] **Step 1: Screenshot.** Make sample pictures by script (gradients and shapes; no system wallpapers, no one's photos), open the app on them, capture only its window.
-- [ ] **Step 2:** Write the files. State plainly that releases are previews until tested on more printers.
-- [ ] **Step 3:** Verify: `grep -c '^## ' README.md` → 8; every relative link and image path in `README.md` exists.
-- [ ] **Step 4:** Commit `docs: a page for people who just want to print`.
+- [x] **Step 1: Screenshot.** Make sample pictures by script (gradients and shapes; no system wallpapers, no one's photos), open the app on them, capture only its window.
+- [x] **Step 2:** Write the files. State plainly that releases are previews until tested on more printers.
+- [x] **Step 3:** Verify: `grep -c '^## ' README.md` → 8; every relative link and image path in `README.md` exists.
+- [x] **Step 4:** Commit `docs: a page for people who just want to print`.
 
 ---
 

@@ -263,14 +263,14 @@ pub fn submit(req: &SubmitRequest, pdf: &Path) -> Result<String, PrintError>; //
 ```
 Command: `print-pictures print --printer NAME --layout <id> [--paper ID] [--copies N] [--no-fit] [--no-sharpen] [-o KEY=VALUE]... FILES...` (rejected and skipped files listed on stderr).
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `lp_args` for printer `PDF`, paper `A4`, option `MediaType=Glossy` equals exactly
     `["-d","PDF","-t",<title>,"-o","PageSize=A4","-o","print-scaling=none","-o","MediaType=Glossy","--","/tmp/x.pdf"]`.
   - `job_title` keeps `-a "b" 100%.jpg` intact; a 200-character non-ASCII name is cut at a character boundary to 64 characters; 3 files end in ` (+2)`.
   - `parse_job_id("request id is PDF-3 (1 file(s))\n") == Some("PDF-3".into())`.
-- [ ] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement. **Step 4:** `cargo test` → PASS.
-- [ ] **Step 5: End-to-end size check.** Print one solid-colour picture with `--printer PDF --layout 10x15`. Expected within 30 s: a new file in `~/PDF`; `pdfinfo` shows A4; rasterised at 127 dpi the first coloured area measures 750×500 px ±5 (150×100 mm). If it is scaled, find the option or filter responsible before continuing.
-- [ ] **Step 6:** Commit `feat: send jobs to CUPS`.
+- [x] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement. **Step 4:** `cargo test` → PASS.
+- [x] **Step 5: End-to-end size check.** Print one solid-colour picture with `--printer PDF --layout 10x15`. Expected within 30 s: a new file in `~/PDF`; `pdfinfo` shows A4; rasterised at 127 dpi the first coloured area measures 750×500 px ±5 (150×100 mm). If it is scaled, find the option or filter responsible before continuing.
+- [x] **Step 6:** Commit `feat: send jobs to CUPS`.
 
 ---
 

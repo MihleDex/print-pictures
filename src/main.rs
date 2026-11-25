@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use print_pictures::cups;
+use print_pictures::cups::{self, SubmitRequest};
 use print_pictures::job::{JobError, JobSpec, build_pdf, check_files};
 use print_pictures::layout::{LayoutId, Margins, Paper, SizeMm};
 use std::path::PathBuf;
@@ -16,6 +16,19 @@ struct Cli {
 enum Command {
     /// List the printers and what each one offers
     Printers,
+    /// Print without opening the window
+    Print {
+        #[command(flatten)]
+        job: JobArgs,
+        #[arg(long)]
+        printer: String,
+        /// A paper size id from `printers`; the printer's default if left out
+        #[arg(long)]
+        paper: Option<String>,
+        /// A printer option, as KEY=VALUE; may be repeated
+        #[arg(short = 'o', value_name = "KEY=VALUE", value_parser = option)]
+        options: Vec<(String, String)>,
+    },
     /// Make the print PDF without sending it to a printer
     Render {
         #[command(flatten)]
@@ -62,6 +75,11 @@ fn paper_size(s: &str) -> Result<SizeMm, String> {
     Ok(SizeMm { w, h })
 }
 
+fn option(s: &str) -> Result<(String, String), String> {
+    let (key, value) = s.split_once('=').ok_or("write it as KEY=VALUE")?;
+    Ok((key.into(), value.into()))
+}
+
 fn report_skipped(skipped: &[(PathBuf, String)]) {
     for (path, why) in skipped {
         eprintln!("Skipped {}: {why}", path.display());
@@ -69,7 +87,12 @@ fn report_skipped(skipped: &[(PathBuf, String)]) {
 }
 
 /// Checks the files and builds the PDF, naming every picture left out.
-fn make_pdf(job: JobArgs, paper: Paper, out: &std::path::Path) -> Result<usize, JobError> {
+/// Returns the page count and the pictures that are on those pages.
+fn make_pdf(
+    job: JobArgs,
+    paper: Paper,
+    out: &std::path::Path,
+) -> Result<(usize, Vec<PathBuf>), JobError> {
     let checked = check_files(&job.files);
     report_skipped(&checked.rejected);
     let spec = JobSpec {
@@ -83,7 +106,9 @@ fn make_pdf(job: JobArgs, paper: Paper, out: &std::path::Path) -> Result<usize, 
     match build_pdf(&spec, out) {
         Ok(built) => {
             report_skipped(&built.skipped);
-            Ok(built.pages)
+            let mut printed = spec.files;
+            printed.retain(|f| !built.skipped.iter().any(|(s, _)| s == f));
+            Ok((built.pages, printed))
         }
         Err(e) => {
             if let JobError::NothingToPrint(skipped) = &e {
@@ -119,16 +144,59 @@ fn list_printers() -> ExitCode {
     ExitCode::SUCCESS
 }
 
+fn print(
+    job: JobArgs,
+    printer: String,
+    paper: Option<String>,
+    options: Vec<(String, String)>,
+) -> Result<String, String> {
+    let caps = cups::capabilities(&printer);
+    let id = paper.unwrap_or_else(|| caps.default_paper.clone());
+    let Some(choice) = caps.paper(&id) else {
+        let known: Vec<&str> = caps.papers.iter().map(|p| p.id.as_str()).collect();
+        return Err(format!(
+            "unknown paper {id}; choose one of {}",
+            known.join(", ")
+        ));
+    };
+    let dir = tempfile::tempdir().map_err(|e| e.to_string())?;
+    let pdf = dir.path().join("job.pdf");
+    let (pages, printed) = make_pdf(job, choice.paper, &pdf).map_err(|e| e.to_string())?;
+    let request = SubmitRequest {
+        title: cups::job_title(&printed),
+        printer,
+        paper_id: id,
+        options,
+    };
+    let job_id = cups::submit(&request, &pdf).map_err(|e| e.to_string())?;
+    Ok(format!("{pages} page(s) sent as job {job_id}"))
+}
+
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Printers => list_printers(),
+        Command::Print {
+            job,
+            printer,
+            paper,
+            options,
+        } => match print(job, printer, paper, options) {
+            Ok(message) => {
+                println!("{message}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::FAILURE
+            }
+        },
         Command::Render { job, paper, out } => {
             let paper = Paper {
                 size: paper,
                 margins: Margins::default(),
             };
             match make_pdf(job, paper, &out) {
-                Ok(pages) => {
+                Ok((pages, _)) => {
                     println!("{pages} page(s) written to {}", out.display());
                     ExitCode::SUCCESS
                 }

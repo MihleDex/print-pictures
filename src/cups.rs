@@ -1,8 +1,10 @@
 //! Printer list and capabilities from the local CUPS server.
 
 use crate::ppd::{self, PrinterCaps};
+use std::ffi::{OsStr, OsString};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
@@ -21,7 +23,7 @@ pub struct Printer {
 }
 
 /// Runs a CUPS tool in the C locale and returns its standard output.
-fn run(program: &str, args: &[&str]) -> Result<String, PrintError> {
+fn run<A: AsRef<OsStr>>(program: &str, args: &[A]) -> Result<String, PrintError> {
     let out = Command::new(program)
         .args(args)
         .env("LC_ALL", "C")
@@ -125,9 +127,122 @@ pub fn capabilities(name: &str) -> PrinterCaps {
         .unwrap_or_else(PrinterCaps::fallback)
 }
 
+#[derive(Clone, Debug)]
+pub struct SubmitRequest {
+    pub printer: String,
+    pub title: String,
+    pub paper_id: String,
+    pub options: Vec<(String, String)>,
+}
+
+const TITLE_CHARS: usize = 64;
+
+/// What the print queue shows: the first file name and how many more there are.
+pub fn job_title(files: &[PathBuf]) -> String {
+    let mut title = String::from("Print Pictures");
+    if let Some(name) = files.first().and_then(|f| f.file_name()) {
+        title = format!("{title} - {}", name.to_string_lossy());
+    }
+    let more = match files.len() {
+        0 | 1 => String::new(),
+        n => format!(" (+{})", n - 1),
+    };
+    let head: String = title.chars().take(TITLE_CHARS - more.len()).collect();
+    head + &more
+}
+
+pub fn lp_args(req: &SubmitRequest, pdf: &Path) -> Vec<OsString> {
+    let mut args: Vec<OsString> = vec![
+        "-d".into(),
+        req.printer.clone().into(),
+        "-t".into(),
+        req.title.clone().into(),
+        "-o".into(),
+        format!("PageSize={}", req.paper_id).into(),
+        // The PDF is already the size of the paper; any scaling would be wrong.
+        "-o".into(),
+        "print-scaling=none".into(),
+    ];
+    for (key, value) in &req.options {
+        args.push("-o".into());
+        args.push(format!("{key}={value}").into());
+    }
+    args.push("--".into());
+    args.push(pdf.into());
+    args
+}
+
+pub fn parse_job_id(stdout: &str) -> Option<String> {
+    let rest = stdout.trim().strip_prefix("request id is ")?;
+    rest.split_whitespace().next().map(str::to_string)
+}
+
+/// Sends the PDF and returns the job id.
+pub fn submit(req: &SubmitRequest, pdf: &Path) -> Result<String, PrintError> {
+    // A network printer's temporary queue may have expired while the window was open.
+    let _ = ppd_for(&req.printer);
+    let reply = run("lp", &lp_args(req, pdf))?;
+    // The job has gone once lp succeeds, so an unexpected reply is not a failure.
+    Ok(parse_job_id(&reply).unwrap_or_else(|| reply.trim().to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lp_arguments_are_exact() {
+        let request = SubmitRequest {
+            printer: "PDF".into(),
+            title: "A title".into(),
+            paper_id: "A4".into(),
+            options: vec![("MediaType".into(), "Glossy".into())],
+        };
+        let expected = [
+            "-d",
+            "PDF",
+            "-t",
+            "A title",
+            "-o",
+            "PageSize=A4",
+            "-o",
+            "print-scaling=none",
+            "-o",
+            "MediaType=Glossy",
+            "--",
+            "/tmp/x.pdf",
+        ];
+        assert_eq!(
+            lp_args(&request, Path::new("/tmp/x.pdf")),
+            expected.map(OsString::from)
+        );
+    }
+
+    #[test]
+    fn job_titles() {
+        let files = |names: &[&str]| names.iter().map(PathBuf::from).collect::<Vec<_>>();
+        assert_eq!(
+            job_title(&files(&["/x/-a \"b\" 100%.jpg"])),
+            "Print Pictures - -a \"b\" 100%.jpg"
+        );
+        let long = "ü".repeat(200);
+        let cut = job_title(&files(&[&long]));
+        assert_eq!(cut.chars().count(), 64);
+        assert!(cut.starts_with("Print Pictures - üü"));
+        let three = job_title(&files(&[&long, "b", "c"]));
+        assert_eq!(three.chars().count(), 64);
+        assert!(three.ends_with("ü (+2)"), "{three}");
+        assert!(job_title(&files(&["a.jpg", "b", "c"])).ends_with("a.jpg (+2)"));
+    }
+
+    #[test]
+    fn job_id() {
+        assert_eq!(
+            parse_job_id("request id is PDF-3 (1 file(s))\n"),
+            Some("PDF-3".into())
+        );
+        assert_eq!(parse_job_id("something else"), None);
+    }
 
     #[test]
     fn printer_list() {

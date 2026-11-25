@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-As of 2026-11-25 all nine tasks of the plan are coded on branch `print-pictures`. Still open: the user's hands-on checks of the window (Task 7) and settings dialogs (Task 8), their right-click check in Thunar (Task 9 Step 6), the final review, and printing on real hardware.
+As of 2026-11-25 the app is coded on branch `print-pictures`, including "Save As" for PDF printers, has had one review of the whole branch, and is installed on this machine. Still open: the user's hands-on checks (main plan Tasks 7–9, save-PDF plan Step 8), merging into `main`, and printing on real hardware.
 
-Installed on this machine on 2026-11-25. The installed program is a copy: after changing code, run `cargo run --release -- install` again.
+- `docs/superpowers/specs/`: what to build and why, including what the user has confirmed.
+- `docs/superpowers/plans/`: the tasks; unticked boxes are what is left.
 
-- `docs/superpowers/specs/2026-11-25-print-pictures-design.md`: what to build and why, including what the user has confirmed.
-- `docs/superpowers/plans/2026-11-25-print-pictures.md`: the nine tasks; unticked boxes are what is left.
+The installed program is a copy: after changing code, run `cargo run --release -- install` again.
 
 Known limit: gdk-pixbuf loads many cut-off picture files without an error, so they print with part missing.
 

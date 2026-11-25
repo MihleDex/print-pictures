@@ -2,6 +2,13 @@
 
 Tick each one after doing it. None of these can be done by the tests.
 
+## First
+
+- [ ] Rename the repository on GitHub to `print-pictures` (Settings → General).
+      Every link in the files points there, so do this before merging into
+      `main` or tagging. Then run
+      `git remote set-url origin git@github.com:MihleDex/print-pictures.git`.
+
 ## On this computer (Xfce)
 
 - [ ] Window: try every layout, "Fit picture to frame" on and off, paging, 3
@@ -30,13 +37,17 @@ Needs `sudo apt install virt-manager` and disk images of Linux Mint Cinnamon,
 Ubuntu (or Zorin OS) and Kubuntu. In each:
 
 - [ ] Double-click the `.deb` and install it.
-- [ ] Select pictures → right-click → "Print" appears (not for a text file); a
-      name with spaces works.
+- [ ] Select pictures → right-click → "Print" appears (not for a text file).
+      Include a file named like `-a "b" 100% Ü.jpg` (try Nemo and Dolphin).
 - [ ] The window opens; a PDF printer asks where to save.
 - [ ] Remove the package; "Print" is gone after reopening the file manager.
+- [ ] On Ubuntu 26.04: a portrait phone photo comes out upright and a camera
+      photo's colours look right (its picture loader is newer than the one tested).
 
 ## Release
 
+- [ ] Set the 0.1.0 date in `data/io.github.mihledex.PrintPictures.metainfo.xml`
+      and `CHANGELOG.md`.
 - [ ] `git tag v0.1.0 && git push origin v0.1.0`; the release page shows the
       `.deb` and `SHA256SUMS`, marked pre-release; download both and run
       `sha256sum -c SHA256SUMS`.

@@ -69,7 +69,8 @@ when everything selected is a picture. "Open With → Print Pictures" always wor
 the folder it is in and run `sudo apt install ./print-pictures_*.deb`.
 
 **I installed it from source before.** The old copy runs instead of the new one.
-Remove it first: `~/.local/bin/print-pictures uninstall`
+Remove it first: `~/.local/bin/print-pictures uninstall`. On Xfce this also
+removes **Print** from the menu, so add it again as described above.
 
 **My printer is not in the list.** Add it in your system's printer settings, then
 open Print Pictures again.
@@ -91,11 +92,13 @@ manager, or run `sudo apt remove print-pictures`.
 
 ## Build from source
 
-You need Rust (from [rustup.rs](https://rustup.rs)) and:
+You need Rust 1.92 or newer (from [rustup.rs](https://rustup.rs)) and:
 
 ```sh
-sudo apt install libgtk-4-dev liblcms2-dev cups-client
+sudo apt install libgtk-4-dev liblcms2-dev cups cups-client poppler-utils
 ```
+
+The tests use `poppler-utils`, and two of them need the print service running.
 
 ```sh
 cargo test

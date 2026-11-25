@@ -10,6 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Install build and test packages
@@ -24,12 +25,8 @@ jobs:
       - run: cargo test
       - run: cargo install cargo-deb --locked
       - run: cargo deb
-      - name: The package installs on newer systems and brings no file manager
-        run: |
-          for image in debian:13 ubuntu:26.04; do
-            docker run --rm -v "$PWD/target/debian:/d" "$image" sh -c \
-              "apt-get update && apt-get install -y /d/*.deb && print-pictures --version && ! dpkg -l caja nautilus nemo dolphin thunar 2>/dev/null | grep -q '^ii'"
-          done
+      - name: The package installs and brings no file manager
+        run: sh .github/install-check.sh
       - name: Checksums
         run: cd target/debian && sha256sum *.deb > SHA256SUMS
       - name: Publish a preview release

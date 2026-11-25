@@ -8,6 +8,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Install build and test packages
@@ -25,3 +26,7 @@ jobs:
       - run: cargo test
       - run: desktop-file-validate data/*.desktop
       - run: appstreamcli validate --no-net data/*.metainfo.xml
+      # The release does the same, so it is tried before anything is tagged.
+      - run: cargo install cargo-deb --locked
+      - run: cargo deb
+      - run: sh .github/install-check.sh

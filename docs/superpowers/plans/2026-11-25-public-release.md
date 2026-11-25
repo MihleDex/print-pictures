@@ -58,14 +58,14 @@ pub fn uninstall(folders: &Folders) -> Result<(), InstallError>;
 `Settings::default_path` takes its config folder from `Folders`, so the XDG rule exists once. A program under `/usr` (the package) is never copied: `install` then only adds the Thunar action pointing at it, and `uninstall` only removes that action. The `install` help says: Add "Print" to Thunar's right-click menu; from a source build, also install the program for this user.
 `config` is `$XDG_CONFIG_HOME` (else `~/.config`), `data` is `$XDG_DATA_HOME` (else `~/.local/share`), a relative or empty value being ignored; `bin` is `~/.local/bin`.
 
-- [ ] **Step 1: Write the failing tests** (adapt the existing `Home` helper to `Folders`):
+- [x] **Step 1: Write the failing tests** (adapt the existing `Home` helper to `Folders`):
   - `folders_follow_xdg`: `new("/home/u", Some("/x/c"), None)` → config `/x/c`, data `/home/u/.local/share`, bin `/home/u/.local/bin`; `Some("rel")` and `Some("")` give the defaults.
   - `thunar_alone`: `add_thunar` creates or changes only `Thunar/uca.xml` (no binary, no desktop entry); `has_thunar` false → true → false across add and `remove_thunar`; the backup rule of the existing tests still holds.
   - `a_packaged_program_is_not_copied`: `install` with exe `/usr/bin/print-pictures` writes only `uca.xml`, whose command is that path; there is no copy in `bin` and no desktop entry; `uninstall` with the same folders removes the action and leaves any file already in `bin`.
-- [ ] **Step 2:** `cargo test integration` → FAIL.
-- [ ] **Step 3: Implement.** `install` and `uninstall` call `add_thunar` / `remove_thunar`; remove the `shortcut:` comment about XDG.
-- [ ] **Step 4:** `cargo test` and clippy → PASS.
-- [ ] **Step 5:** Commit `feat: honour user folders and add the Thunar action on its own`.
+- [x] **Step 2:** `cargo test integration` → FAIL.
+- [x] **Step 3: Implement.** `install` and `uninstall` call `add_thunar` / `remove_thunar`; remove the `shortcut:` comment about XDG.
+- [x] **Step 4:** `cargo test` and clippy → PASS.
+- [x] **Step 5:** Commit `feat: honour user folders and add the Thunar action on its own`.
 
 ---
 

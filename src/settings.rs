@@ -1,5 +1,6 @@
 //! Choices remembered between runs.
 
+use crate::integration::Folders;
 use crate::layout::LayoutId;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -69,9 +70,9 @@ impl Settings {
 }
 
 fn config_file(xdg: Option<OsString>, home: Option<OsString>) -> PathBuf {
-    xdg.map(PathBuf::from)
-        .filter(|dir| dir.is_absolute())
-        .unwrap_or_else(|| PathBuf::from(home.unwrap_or_default()).join(".config"))
+    let home = PathBuf::from(home.unwrap_or_default());
+    Folders::new(&home, xdg, None)
+        .config
         .join("print-pictures/settings.toml")
 }
 

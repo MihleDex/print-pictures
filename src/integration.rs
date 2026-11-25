@@ -1,5 +1,6 @@
 //! The Thunar right-click action and the desktop entry.
 
+use std::ffi::OsString;
 use std::fs;
 use std::io::{self, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -9,6 +10,8 @@ const OUR_ID: &str = "<unique-id>print-pictures-1</unique-id>";
 const END: &str = "</actions>";
 const NO_ACTIONS: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n";
 const BACKUP: &str = "uca.xml.print-pictures.bak";
+/// What Thunar uses for someone who has no actions file of their own.
+pub const SYSTEM_UCA: &str = "/etc/xdg/Thunar/uca.xml";
 const MIME_TYPES: &str =
     "image/jpeg;image/png;image/bmp;image/gif;image/tiff;image/webp;image/heic;image/heif;";
 
@@ -92,20 +95,44 @@ pub fn desktop_entry(exe: &Path) -> String {
     )
 }
 
-// shortcut: assumes ~/.config and ~/.local/share; honour XDG_CONFIG_HOME and
-// XDG_DATA_HOME if someone moves them.
-struct Places {
-    uca: PathBuf,
-    binary: PathBuf,
-    entry: PathBuf,
+/// Where a user's own files go.
+pub struct Folders {
+    pub config: PathBuf,
+    pub data: PathBuf,
+    pub bin: PathBuf,
 }
 
-fn places(home: &Path) -> Places {
-    Places {
-        uca: home.join(".config/Thunar/uca.xml"),
-        binary: home.join(".local/bin/print-pictures"),
-        entry: home.join(".local/share/applications/print-pictures.desktop"),
+impl Folders {
+    /// The XDG variables count only when they hold an absolute path.
+    pub fn new(home: &Path, xdg_config: Option<OsString>, xdg_data: Option<OsString>) -> Folders {
+        let or_home = |set: Option<OsString>, fallback: &str| {
+            set.map(PathBuf::from)
+                .filter(|dir| dir.is_absolute())
+                .unwrap_or_else(|| home.join(fallback))
+        };
+        Folders {
+            config: or_home(xdg_config, ".config"),
+            data: or_home(xdg_data, ".local/share"),
+            bin: home.join(".local/bin"),
+        }
     }
+
+    fn binary(&self) -> PathBuf {
+        self.bin.join("print-pictures")
+    }
+
+    fn entry(&self) -> PathBuf {
+        self.data.join("applications/print-pictures.desktop")
+    }
+}
+
+/// True for the packaged program, which is already installed for everyone.
+pub fn is_system_install(exe: &Path) -> bool {
+    exe.starts_with("/usr")
+}
+
+fn uca_file(config: &Path) -> PathBuf {
+    config.join("Thunar/uca.xml")
 }
 
 fn about(path: &Path) -> impl FnOnce(io::Error) -> InstallError {
@@ -157,31 +184,62 @@ fn change_uca(uca: &Path, current: Option<&str>, new: &str) -> Result<(), Instal
     replace(&target, new.as_bytes(), mode)
 }
 
-pub fn install(home: &Path, exe: &Path, system_uca: &Path) -> Result<(), InstallError> {
-    let places = places(home);
-    let current = read_if_there(&places.uca)?;
+/// A change to uca.xml that has been worked out but not yet written.
+struct Planned {
+    uca: PathBuf,
+    current: Option<String>,
+    new: String,
+}
+
+/// Fails, before anything is written, if the file is not understood.
+fn plan_add(config: &Path, exe: &Path, system_uca: &Path) -> Result<Planned, InstallError> {
+    let uca = uca_file(config);
+    let current = read_if_there(&uca)?;
     let base = match &current {
         Some(text) => text.clone(),
         None => read_if_there(system_uca)?.unwrap_or_else(|| NO_ACTIONS.into()),
     };
-    // Fails before anything is written if the file is not understood.
-    let new = add_action(&base, &places.binary)?;
-    let program = fs::read(exe).map_err(about(exe))?;
-    replace(&places.binary, &program, 0o755)?;
-    replace(
-        &places.entry,
-        desktop_entry(&places.binary).as_bytes(),
-        0o644,
-    )?;
-    change_uca(&places.uca, current.as_deref(), &new)
+    let new = add_action(&base, exe)?;
+    Ok(Planned { uca, current, new })
 }
 
-pub fn uninstall(home: &Path) -> Result<(), InstallError> {
-    let places = places(home);
-    if let Some(current) = read_if_there(&places.uca)? {
-        change_uca(&places.uca, Some(&current), &remove_action(&current))?;
+/// Adds "Print" to Thunar's menu for this user, running `exe`.
+pub fn add_thunar(config: &Path, exe: &Path, system_uca: &Path) -> Result<(), InstallError> {
+    let planned = plan_add(config, exe, system_uca)?;
+    change_uca(&planned.uca, planned.current.as_deref(), &planned.new)
+}
+
+pub fn remove_thunar(config: &Path) -> Result<(), InstallError> {
+    let uca = uca_file(config);
+    if let Some(current) = read_if_there(&uca)? {
+        change_uca(&uca, Some(&current), &remove_action(&current))?;
     }
-    for path in [places.binary, places.entry] {
+    Ok(())
+}
+
+pub fn has_thunar(config: &Path) -> bool {
+    std::fs::read_to_string(uca_file(config)).is_ok_and(|text| text.contains(OUR_ID))
+}
+
+pub fn install(folders: &Folders, exe: &Path, system_uca: &Path) -> Result<(), InstallError> {
+    if is_system_install(exe) {
+        // Copying it would put a stale copy in front of the packaged one.
+        return add_thunar(&folders.config, exe, system_uca);
+    }
+    let binary = folders.binary();
+    let planned = plan_add(&folders.config, &binary, system_uca)?;
+    let program = fs::read(exe).map_err(about(exe))?;
+    replace(&binary, &program, 0o755)?;
+    replace(&folders.entry(), desktop_entry(&binary).as_bytes(), 0o644)?;
+    change_uca(&planned.uca, planned.current.as_deref(), &planned.new)
+}
+
+pub fn uninstall(folders: &Folders, exe: &Path) -> Result<(), InstallError> {
+    remove_thunar(&folders.config)?;
+    if is_system_install(exe) {
+        return Ok(());
+    }
+    for path in [folders.binary(), folders.entry()] {
         match fs::remove_file(&path) {
             Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(about(&path)(e)),
             _ => {}
@@ -306,12 +364,16 @@ mod tests {
             self.at(".config/Thunar/uca.xml.print-pictures.bak")
         }
 
+        fn folders(&self) -> Folders {
+            Folders::new(&self.dir.path().join("home"), None, None)
+        }
+
         fn install(&self) -> Result<(), InstallError> {
-            install(&self.dir.path().join("home"), &self.program, &self.system)
+            install(&self.folders(), &self.program, &self.system)
         }
 
         fn uninstall(&self) -> Result<(), InstallError> {
-            uninstall(&self.dir.path().join("home"))
+            uninstall(&self.folders(), &self.program)
         }
     }
 
@@ -375,8 +437,62 @@ mod tests {
         let home = Home::new(Some(TWO_ACTIONS));
         home.install().unwrap();
         let installed = home.at(BINARY);
-        install(&home.dir.path().join("home"), &installed, &home.system).unwrap();
+        install(&home.folders(), &installed, &home.system).unwrap();
         assert_eq!(fs::read_to_string(installed).unwrap(), "the program");
+    }
+
+    #[test]
+    fn folders_follow_xdg() {
+        let os = |s: &str| Some(OsString::from(s));
+        let home = Path::new("/home/u");
+        let set = Folders::new(home, os("/x/c"), None);
+        assert_eq!(set.config, Path::new("/x/c"));
+        assert_eq!(set.data, Path::new("/home/u/.local/share"));
+        assert_eq!(set.bin, Path::new("/home/u/.local/bin"));
+        assert_eq!(Folders::new(home, None, os("/x/d")).data, Path::new("/x/d"));
+        for ignored in ["rel", ""] {
+            let folders = Folders::new(home, os(ignored), os(ignored));
+            assert_eq!(folders.config, Path::new("/home/u/.config"));
+            assert_eq!(folders.data, Path::new("/home/u/.local/share"));
+        }
+    }
+
+    #[test]
+    fn thunar_alone() {
+        let home = Home::new(Some(TWO_ACTIONS));
+        let config = home.folders().config;
+        assert!(!has_thunar(&config));
+        add_thunar(&config, exe(), &home.system).unwrap();
+        assert!(has_thunar(&config));
+        assert!(!home.at(BINARY).exists() && !home.at(ENTRY).exists());
+        assert_eq!(fs::read_to_string(home.backup()).unwrap(), TWO_ACTIONS);
+        let added = fs::read_to_string(home.uca()).unwrap();
+        add_thunar(&config, exe(), &home.system).unwrap();
+        assert_eq!(fs::read_to_string(home.backup()).unwrap(), TWO_ACTIONS);
+        remove_thunar(&config).unwrap();
+        assert!(!has_thunar(&config));
+        assert_eq!(fs::read_to_string(home.uca()).unwrap(), TWO_ACTIONS);
+        assert_eq!(fs::read_to_string(home.backup()).unwrap(), added);
+        remove_thunar(&Home::new(None).folders().config).unwrap();
+    }
+
+    #[test]
+    fn a_packaged_program_is_not_copied() {
+        let home = Home::new(Some(TWO_ACTIONS));
+        // Not read, because it is not copied.
+        let packaged = Path::new("/usr/bin/print-pictures");
+        assert!(is_system_install(packaged) && !is_system_install(&home.program));
+        install(&home.folders(), packaged, &home.system).unwrap();
+        let text = fs::read_to_string(home.uca()).unwrap();
+        assert!(text.contains("<command>\"/usr/bin/print-pictures\" %F</command>"));
+        assert!(!home.at(BINARY).exists() && !home.at(ENTRY).exists());
+
+        // A copy from an earlier source build is not this program's to delete.
+        fs::create_dir_all(home.at(BINARY).parent().unwrap()).unwrap();
+        fs::write(home.at(BINARY), "older").unwrap();
+        uninstall(&home.folders(), packaged).unwrap();
+        assert_eq!(fs::read_to_string(home.uca()).unwrap(), TWO_ACTIONS);
+        assert!(home.at(BINARY).exists());
     }
 
     #[test]

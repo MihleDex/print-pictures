@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use print_pictures::cups::{self, SubmitRequest};
-use print_pictures::integration;
+use print_pictures::integration::{self, Folders};
 use print_pictures::job::{JobError, JobSpec, build_pdf, check_files};
 use print_pictures::layout::{LayoutId, Margins, Paper, SizeMm};
 use std::path::{Path, PathBuf};
@@ -21,7 +21,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Add "Print" to Thunar's right-click menu for pictures
+    /// Add "Print" to Thunar's right-click menu; from a source build, also
+    /// install the program for this user
     Install,
     /// Remove it again
     Uninstall,
@@ -188,23 +189,29 @@ fn set_up(remove: bool) -> ExitCode {
         eprintln!("HOME is not set");
         return ExitCode::FAILURE;
     };
-    let result = if remove {
-        integration::uninstall(&home).map_err(|e| e.to_string())
-    } else {
-        std::env::current_exe()
-            .map_err(|e| e.to_string())
-            .and_then(|exe| {
-                let system = Path::new("/etc/xdg/Thunar/uca.xml");
-                integration::install(&home, &exe, system).map_err(|e| e.to_string())
-            })
-    };
+    let folders = Folders::new(
+        &home,
+        std::env::var_os("XDG_CONFIG_HOME"),
+        std::env::var_os("XDG_DATA_HOME"),
+    );
+    let result = std::env::current_exe()
+        .map_err(|e| e.to_string())
+        .and_then(|exe| {
+            let done = if remove {
+                integration::uninstall(&folders, &exe)
+            } else {
+                let system = Path::new(integration::SYSTEM_UCA);
+                integration::install(&folders, &exe, system)
+            };
+            done.map_err(|e| e.to_string())
+        });
     if let Err(e) = result {
         eprintln!("{e}");
         return ExitCode::FAILURE;
     }
     // So that "Open With" learns about the desktop entry, or forgets it.
     let _ = std::process::Command::new("update-desktop-database")
-        .arg(home.join(".local/share/applications"))
+        .arg(folders.data.join("applications"))
         .status();
     let done = if remove { "Removed." } else { "Installed." };
     println!("{done} Close Thunar with `thunar -q`, then open it again.");

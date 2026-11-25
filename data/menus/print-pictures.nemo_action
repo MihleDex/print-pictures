@@ -1,0 +1,7 @@
+[Nemo Action]
+Name=Print
+Comment=Print the selected pictures
+Exec=print-pictures %F
+Icon-Name=printer
+Selection=notnone
+Mimetypes=image/*;

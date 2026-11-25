@@ -2,6 +2,11 @@
 name = "print-pictures"
 version = "0.1.0"
 edition = "2024"
+# What the GTK crates need.
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+description = "Print photos in standard sizes, like Windows' Print Pictures"
+repository = "https://github.com/MihleDex/print-pictures"
 
 [dependencies]
 gtk4 = { version = "0.11", features = ["v4_14"] }
@@ -14,3 +19,24 @@ toml = "1"
 clap = { version = "4.6", features = ["derive"] }
 thiserror = "2"
 tempfile = "3"
+
+[package.metadata.deb]
+maintainer = "MihleDex <52197701+MihleDex@users.noreply.github.com>"
+copyright = "2026 MihleDex"
+section = "graphics"
+priority = "optional"
+depends = "$auto, cups-client"
+recommends = "heif-gdk-pixbuf, webp-pixbuf-loader, python3-nautilus, python3-caja"
+extended-description = """\
+A copy of the Windows "Print Pictures" window. Select pictures in your file \
+manager, right-click them, choose Print, pick a layout and print."""
+assets = [
+  ["target/release/print-pictures", "usr/bin/", "755"],
+  ["data/io.github.mihledex.PrintPictures.desktop", "usr/share/applications/", "644"],
+  ["data/io.github.mihledex.PrintPictures.metainfo.xml", "usr/share/metainfo/", "644"],
+  ["data/io.github.mihledex.PrintPictures.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+  ["data/menus/print-pictures.nemo_action", "usr/share/nemo/actions/", "644"],
+  ["data/menus/print-pictures-dolphin.desktop", "usr/share/kio/servicemenus/print-pictures.desktop", "644"],
+  ["data/menus/nautilus_print_pictures.py", "usr/share/nautilus-python/extensions/print_pictures.py", "644"],
+  ["data/menus/caja_print_pictures.py", "usr/share/caja-python/extensions/print_pictures.py", "644"],
+]

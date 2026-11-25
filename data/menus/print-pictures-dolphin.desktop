@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Service
+MimeType=image/*;
+Actions=printPictures;
+X-KDE-Priority=TopLevel
+
+[Desktop Action printPictures]
+Name=Print
+Icon=printer
+Exec=print-pictures %F

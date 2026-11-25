@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mihledex.PrintPictures</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Print Pictures</name>
+  <summary>Print photos in standard sizes</summary>
+  <description>
+    <p>Select pictures in your file manager, right-click them and choose Print. Pick a layout such as full page, 10 x 15 cm, wallet or contact sheet, and print.</p>
+    <p>Made for people who are used to the Print Pictures window in Windows. Works with printers set up in CUPS.</p>
+  </description>
+  <launchable type="desktop-id">io.github.mihledex.PrintPictures.desktop</launchable>
+  <url type="homepage">https://github.com/MihleDex/print-pictures</url>
+  <url type="bugtracker">https://github.com/MihleDex/print-pictures/issues</url>
+  <developer id="io.github.mihledex">
+    <name>MihleDex</name>
+  </developer>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/MihleDex/print-pictures/main/docs/screenshot.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-25"/>
+  </releases>
+</component>

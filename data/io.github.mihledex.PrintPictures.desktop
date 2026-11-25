@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Print Pictures
+Comment=Print photos in standard sizes
+Exec=print-pictures %F
+Icon=io.github.mihledex.PrintPictures
+Terminal=false
+Categories=Graphics;
+MimeType=image/jpeg;image/png;image/bmp;image/gif;image/tiff;image/webp;image/heic;image/heif;

@@ -12,7 +12,7 @@ use gtk4::prelude::*;
 use gtk4::{gio, glib};
 use std::path::PathBuf;
 
-const APPLICATION_ID: &str = "local.printpictures.PrintPictures";
+pub const APPLICATION_ID: &str = "io.github.mihledex.PrintPictures";
 
 pub fn run(files: Vec<PathBuf>) -> glib::ExitCode {
     // Not unique: every right-click gets its own window.

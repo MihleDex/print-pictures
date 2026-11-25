@@ -193,14 +193,14 @@ assets = [
 The `.desktop` entry: `Name=Print Pictures`, `Exec=print-pictures %F`, `Icon=io.github.mihledex.PrintPictures`, `Categories=Graphics;`, the MIME types of `integration.rs`. The metainfo: same id, `metadata_license` CC0-1.0, `project_license` GPL-3.0-or-later, a screenshot at `https://raw.githubusercontent.com/MihleDex/print-pictures/main/docs/screenshot.png`, release 0.1.0. The icon is the implementer's own simple drawing of a printer with a photo.
 
 - [ ] **Step 1: Ask the user** to rename the repository on GitHub (Settings → General → Repository name → `print-pictures`). Then `git remote set-url origin git@github.com:MihleDex/print-pictures.git`; `git ls-remote origin` succeeds.
-- [ ] **Step 2: Write the failing tests.**
+- [x] **Step 2: Write the failing tests.**
   - `data/menus/test_menus.py` (`unittest`; load each extension with a stub `gi.repository` that records `spawn_async`), for both: images with paths `/p/-a "b" 100% Ü.jpg` and `/p/c d.png` → one item labelled "Print", and activating it spawns exactly `["print-pictures", <those two>]`; an empty selection, a `text/plain` among images, or a `None` path → `[]`.
   - `tests/packaging.rs`: runs `python3 data/menus/test_menus.py`; every menu file contains `print-pictures`; Nemo and Dolphin files contain `image/*` and `%F`; `APPLICATION_ID` equals the data file names.
-- [ ] **Step 3:** `cargo test --test packaging` → FAIL.
-- [ ] **Step 4: Create the files**, set the application id, and set `rust-version` to the oldest toolchain for which `cargo +<version> build` succeeds.
-- [ ] **Step 5:** `cargo test`, clippy → PASS. `desktop-file-validate data/*.desktop` and `appstreamcli validate --no-net data/*.metainfo.xml` → no errors.
-- [ ] **Step 6:** `cargo install cargo-deb --locked && cargo deb` → `dpkg-deb -c target/debian/*.deb` lists the eight assets; `dpkg-deb -f target/debian/*.deb Depends` contains `libgtk-4-1`, `liblcms2-2`, `cups-client`.
-- [ ] **Step 7:** Commit `feat: package for the Mint and Ubuntu family`.
+- [x] **Step 3:** `cargo test --test packaging` → FAIL.
+- [x] **Step 4: Create the files**, set the application id, and set `rust-version` to the oldest toolchain for which `cargo +<version> build` succeeds.
+- [x] **Step 5:** `cargo test`, clippy → PASS. `desktop-file-validate data/*.desktop` and `appstreamcli validate --no-net data/*.metainfo.xml` → no errors.
+- [x] **Step 6:** `cargo install cargo-deb --locked && cargo deb` → `dpkg-deb -c target/debian/*.deb` lists the eight assets; `dpkg-deb -f target/debian/*.deb Depends` contains `libgtk-4-1`, `liblcms2-2`, `cups-client`.
+- [x] **Step 7:** Commit `feat: package for the Mint and Ubuntu family`.
 
 ---
 

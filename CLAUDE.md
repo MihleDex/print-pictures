@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-As of 2026-11-25 there is no code and no git repository, only the design spec and the implementation plan. Everything below about commands and modules describes what the plan will create. Update this file as the code lands and where it diverges from the plan.
+As of 2026-11-25, Tasks 1–3 of the plan are built on branch `print-pictures`: layout, picture loading, drawing, PDF building and the `render` command. The window, printing, `printers`, `print` and `install` are not built yet, so anything below about them describes what the plan will create. Update this file as the code lands and where it diverges from the plan.
+
+Known limit: gdk-pixbuf loads many cut-off picture files without an error, so they print with part missing.
 
 - `docs/superpowers/specs/2026-11-25-print-pictures-design.md`: what to build and why. Its "Approaches" and "Not yet confirmed" sections are assumptions the user has not agreed to.
 - `docs/superpowers/plans/2026-11-25-print-pictures.md`: nine tasks with interfaces, tests and exact constraints. Execute it with `superpowers:subagent-driven-development` or `superpowers:executing-plans`, ticking its checkboxes.

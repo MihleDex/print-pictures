@@ -180,20 +180,20 @@ pub enum JobError { NothingToPrint(Vec<(PathBuf, String)>), LayoutUnavailable, P
 ```
 Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copies N] [--no-fit] [--no-sharpen] -o OUT.pdf FILES...` (zero margins; rejected and skipped files listed on stderr).
 
-- [ ] **Step 1: Write the failing unit tests.**
+- [x] **Step 1: Write the failing unit tests.**
   - `fit(300, 200, slot{x:10,y:10,w:90,h:130}, true)` → `turn`, image `{10, 7.5, 90, 135}`, clip = slot.
   - Same with `false` → image w ≈ 86.667, h = 130, x ≈ 11.667, clip = image.
   - Square picture is never turned. A 4000×400 picture with `false` lies wholly inside the slot.
   - `sharpen`: uniform grey unchanged; across a 100|200 step the dark side goes below 100 and the light side above 200.
-- [ ] **Step 2: Write the failing PDF tests** (`tests/render.rs`). Add helper `raster_pdf(pdf: &Path, page: u32, dpi: u32) -> Raster` running `pdftoppm` and parsing its PPM; use 127 dpi = 5 px/mm.
+- [x] **Step 2: Write the failing PDF tests** (`tests/render.rs`). Add helper `raster_pdf(pdf: &Path, page: u32, dpi: u32) -> Raster` running `pdftoppm` and parsing its PPM; use 127 dpi = 5 px/mm.
   - `sizes_and_pages`: 3 solid pictures, 13x18, A4 → returns `pages == 2`; `pdfinfo` shows `Pages: 2` and A4 (595.x × 841.x pts); each slot centre has its picture's colour; pixel at 2 mm,2 mm is white.
   - `quarter_turn_direction`: landscape left-red/right-blue picture into 9x13 → top of the first slot red, bottom blue (turn is clockwise).
   - `awkward_names`: a file named `-Ünï "quoted" 100%.png` renders.
   - `bad_files_are_skipped`: `check_files([good, text-as-jpg, missing])` → 1 usable, 2 rejected with those paths; `build_pdf` with no files → `NothingToPrint` with an empty list and no output file.
   - `damaged_body_is_skipped`: write a 200×200 PNG with varied pixels; keep it up to and including the 16 bytes that follow `IDAT`, and set every later byte to zero. Assert first that `check_files` lists it as usable and `load` returns an error. Then `build_pdf` of `[good, damaged, good]` at 13x18 → `pages == 1`, `skipped` names only the damaged file, output exists. `build_pdf` of `[damaged]` → `NothingToPrint` listing it, and no output file.
-- [ ] **Step 3:** `cargo test` → FAIL.
-- [ ] **Step 4: Implement.** Fit scale is `max` (fill) or `min` (fit) of the slot/picture ratios after any turn, centred. Sharpen: `v + 0.5 * (v - mean3x3)`, clamped. Draw via a cairo `Rgb24` surface (BGRX in memory). `build_pdf` decodes one picture at a time at `PRINT_DPI` for its slot, writes to a temporary file beside `out` and renames on success. Contact sheet slots use `split_caption` with the file name. `check_files` uses `probe`. When a picture fails to load, `build_pdf` removes that file from its list, records it in `skipped` and builds again from the start, so no slot is left blank (add `// shortcut: one rebuild per damaged picture; fine while they are rare`). If none remain, return `NothingToPrint(skipped)`.
-- [ ] **Step 5:** `cargo test` → PASS.
+- [x] **Step 3:** `cargo test` → FAIL.
+- [x] **Step 4: Implement.** Fit scale is `max` (fill) or `min` (fit) of the slot/picture ratios after any turn, centred. Sharpen: `v + 0.5 * (v - mean3x3)`, clamped. Draw via a cairo `Rgb24` surface (BGRX in memory). `build_pdf` decodes one picture at a time at `PRINT_DPI` for its slot, writes to a temporary file beside `out` and renames on success. Contact sheet slots use `split_caption` with the file name. `check_files` uses `probe`. When a picture fails to load, `build_pdf` removes that file from its list, records it in `skipped` and builds again from the start, so no slot is left blank (add `// shortcut: one rebuild per damaged picture; fine while they are rare`). If none remain, return `NothingToPrint(skipped)`.
+- [x] **Step 5:** `cargo test` → PASS.
 - [ ] **Step 6: Early look (Human check).** Ask your human partner for a few of their own pictures, then render every layout:
   `mkdir -p target/layout-check && for l in full 20x25 13x18 10x15 9x13 wallet contact; do cargo run -- render --layout $l -o target/layout-check/$l.pdf <pictures>; done`
   Also render one layout with `--no-sharpen`. Ask them to compare with what they remember (holding a printed page against a frame if they can): picture sizes, metric captions such as "13 x 18 cm (2)", file names on the contact sheet, sharpening on by default. Record each answer under "Not yet confirmed" in the spec. If a size or caption changes, update the spec's layout table and Task 1's tests before going on.
@@ -206,7 +206,7 @@ Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copie
   ls -lh target/timing/big.pdf
   ```
   Tell your human partner both numbers (the estimate beforehand was about 2.4 GB). Do not change how pictures are embedded without their decision. Then `rm -r target/timing`.
-- [ ] **Step 8:** Commit `feat: render pictures to PDF`.
+- [x] **Step 8:** Commit `feat: render pictures to PDF`.
 
 ---
 

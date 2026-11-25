@@ -2,6 +2,7 @@
 #![allow(dead_code)] // not every test file uses every helper
 
 use gdk_pixbuf::{Colorspace, Pixbuf};
+use print_pictures::image_source::Raster;
 use std::path::Path;
 
 fn pixbuf(data: Vec<u8>, w: u32, h: u32, alpha: bool) -> Pixbuf {
@@ -50,4 +51,38 @@ pub fn add_exif_orientation(jpeg: &Path, orientation: u8) {
     let mut bytes = std::fs::read(jpeg).unwrap();
     bytes.splice(2..2, exif);
     std::fs::write(jpeg, bytes).unwrap();
+}
+
+/// Rasterises one PDF page with `pdftoppm`; 127 dpi gives 5 px per mm.
+pub fn raster_pdf(pdf: &Path, page: u32, dpi: u32) -> Raster {
+    let dir = tempfile::tempdir().unwrap();
+    let prefix = dir.path().join("page");
+    let page = page.to_string();
+    let status = std::process::Command::new("pdftoppm")
+        .args([
+            "-r",
+            &dpi.to_string(),
+            "-f",
+            &page,
+            "-l",
+            &page,
+            "-singlefile",
+        ])
+        .arg(pdf)
+        .arg(&prefix)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let ppm = std::fs::read(prefix.with_extension("ppm")).unwrap();
+    // Header: "P6\n<width> <height>\n255\n", then the pixels.
+    let mut parts = ppm.splitn(4, |&b| b == b'\n');
+    assert_eq!(parts.next(), Some(&b"P6"[..]));
+    let size = std::str::from_utf8(parts.next().unwrap()).unwrap();
+    let (width, height) = size.split_once(' ').unwrap();
+    assert_eq!(parts.next(), Some(&b"255"[..]));
+    Raster {
+        width: width.parse().unwrap(),
+        height: height.parse().unwrap(),
+        rgb: parts.next().unwrap().to_vec(),
+    }
 }

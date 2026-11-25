@@ -1,5 +1,7 @@
+pub mod cups;
 pub mod image_source;
 pub mod job;
 pub mod layout;
+pub mod ppd;
 pub mod render;
 pub mod sharpen;

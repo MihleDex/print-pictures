@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use print_pictures::cups;
 use print_pictures::job::{JobError, JobSpec, build_pdf, check_files};
 use print_pictures::layout::{LayoutId, Margins, Paper, SizeMm};
 use std::path::PathBuf;
@@ -13,6 +14,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// List the printers and what each one offers
+    Printers,
     /// Make the print PDF without sending it to a printer
     Render {
         #[command(flatten)]
@@ -91,8 +94,34 @@ fn make_pdf(job: JobArgs, paper: Paper, out: &std::path::Path) -> Result<usize, 
     }
 }
 
+fn list_printers() -> ExitCode {
+    let printers = match cups::printers() {
+        Ok(printers) => printers,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if printers.is_empty() {
+        println!("No printers are installed.");
+    }
+    for printer in printers {
+        let default = if printer.is_default { " (default)" } else { "" };
+        let stopped = if printer.stopped { " (stopped)" } else { "" };
+        let caps = cups::capabilities(&printer.name);
+        let papers: Vec<&str> = caps.papers.iter().map(|p| p.id.as_str()).collect();
+        let options: Vec<&str> = caps.options.iter().map(|o| o.keyword.as_str()).collect();
+        println!("{}{default}{stopped}", printer.name);
+        println!("  default paper: {}", caps.default_paper);
+        println!("  papers: {}", papers.join(", "));
+        println!("  options: {}", options.join(", "));
+    }
+    ExitCode::SUCCESS
+}
+
 fn main() -> ExitCode {
     match Cli::parse().command {
+        Command::Printers => list_printers(),
         Command::Render { job, paper, out } => {
             let paper = Paper {
                 size: paper,

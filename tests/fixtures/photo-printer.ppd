@@ -1,0 +1,48 @@
+*PPD-Adobe: "4.3"
+*% A small photo printer for the parser tests.
+*LanguageEncoding: ISOLatin1
+*ModelName: "Test Photo"
+*cupsFilter: "application/vnd.cups-raster 0 -"
+*Patch: "first line of a value
+*MediaType Fake/Not a choice: this is still inside the quotes
+last line"
+*End
+
+*OpenUI *PageSize/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: A4
+*PageSize A4/A4: "<</PageSize[595 842]>>setpagedevice"
+*PageSize 4x6.Borderless/4 x 6 in (borderless): "<</PageSize[288 432]>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion/Media Size: PickOne
+*DefaultPageRegion: A4
+*PageRegion A4/A4: "<</PageSize[595 842]>>setpagedevice"
+*PageRegion 4x6.Borderless/4 x 6 in (borderless): "<</PageSize[288 432]>>setpagedevice"
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: A4
+*ImageableArea A4/A4: "8.5 8.5 586.5 833.5"
+*ImageableArea 4x6.Borderless/4 x 6 in (borderless): "0 0 288 432"
+*DefaultPaperDimension: A4
+*PaperDimension A4/A4: "595 842"
+*PaperDimension 4x6.Borderless/4 x 6 in (borderless): "288 432"
+
+*OpenUI *MediaType/Media Type: PickOne
+*DefaultMediaType: Plain
+*MediaType Plain/Plain Paper: "<</MediaType(Plain)>>setpagedevice"
+*MediaType Glossy/Glossy Photo: "<</MediaType(Glossy)>>setpagedevice"
+*fr.MediaType Glossy/Brillant: ""
+*CloseUI: *MediaType
+
+*OpenUI *cupsPrintQuality/Quality: PickOne
+*DefaultcupsPrintQuality: Normal
+*cupsPrintQuality Normal/Normal: ""
+*cupsPrintQuality High/High: ""
+*CloseUI: *cupsPrintQuality
+
+*OpenUI *ColorModel/Color Mode: PickOne
+*DefaultColorModel: RGB
+*ColorModel RGB/Color: ""
+*ColorModel Gray/Grayscale: ""
+*CloseUI: *ColorModel

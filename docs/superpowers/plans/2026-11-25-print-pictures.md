@@ -235,17 +235,17 @@ pub fn printers() -> Result<Vec<Printer>, PrintError>;
 pub fn capabilities(name: &str) -> PrinterCaps;          // fallback() on any failure
 ```
 
-- [ ] **Step 1:** Write the fixture: PageSize/ImageableArea/PaperDimension for `A4` (`"8.5 8.5 586.5 833.5"`, dimension `"595 842"`) and `4x6.Borderless` (`"0 0 288 432"`), `MediaType` (Plain default, Glossy), `cupsPrintQuality` (Normal default, High), `ColorModel`, and one multi-line quoted value.
-- [ ] **Step 2: Write the failing tests.**
+- [x] **Step 1:** Write the fixture: PageSize/ImageableArea/PaperDimension for `A4` (`"8.5 8.5 586.5 833.5"`, dimension `"595 842"`) and `4x6.Borderless` (`"0 0 288 432"`), `MediaType` (Plain default, Glossy), `cupsPrintQuality` (Normal default, High), `ColorModel`, and one multi-line quoted value.
+- [x] **Step 2: Write the failing tests.**
   - A4 margins are each 3.0 mm ±0.05; borderless margins are 0.
   - `paper_type()` choices `Plain`,`Glossy`, default `Plain`; `quality().keyword == "cupsPrintQuality"`; no option has keyword `PageSize` or `PageRegion`.
   - `parse("garbage")` is `None`.
   - `parse_printers("PDF\nOffice\n", "system default destination: PDF\n", "printer PDF is idle.  enabled since x\nprinter Office disabled since x -\n\treason\n")` → PDF default and not stopped, Office stopped. Empty names → empty list.
-- [ ] **Step 3:** `cargo test` → FAIL.
-- [ ] **Step 4: Implement.** Fetch the PPD with an HTTP/1.0 `GET /printers/<percent-encoded name>.ppd` over the Unix socket `/run/cups/cups.sock`, requiring status 200. PPD points convert at 25.4/72; margins are `llx`, `h-ury`, `w-urx`, `lly`.
-- [ ] **Step 5:** `cargo test` → PASS.
-- [ ] **Step 6:** Add `print-pictures printers` (each printer, its default paper and option keywords). Run it. Expected: `PDF`, default paper `A4`, options including `Resolution`. If it shows the fallback instead, the PPD fetch is wrong: fix before continuing.
-- [ ] **Step 7:** Commit `feat: printer capabilities`.
+- [x] **Step 3:** `cargo test` → FAIL.
+- [x] **Step 4: Implement.** Fetch the PPD with an HTTP/1.0 `GET /printers/<percent-encoded name>.ppd` over the Unix socket `/run/cups/cups.sock`, requiring status 200. PPD points convert at 25.4/72; margins are `llx`, `h-ury`, `w-urx`, `lly`.
+- [x] **Step 5:** `cargo test` → PASS.
+- [x] **Step 6:** Add `print-pictures printers` (each printer, its default paper and option keywords). Run it. Expected: `PDF`, default paper `A4`, options including `Resolution`. If it shows the fallback instead, the PPD fetch is wrong: fix before continuing.
+- [x] **Step 7:** Commit `feat: printer capabilities`.
 
 ---
 

@@ -1,0 +1,113 @@
+*PPD-Adobe: "4.3"
+*FormatVersion: "4.3"
+*FileVersion: "2.0.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*FileSystem: False
+*PCFileName: "drvless.ppd"
+*Manufacturer: "Example"
+*ModelName: "Example Printer"
+*Product: "(Example Printer)"
+*NickName: "Example Printer, driverless, 2.0.0"
+*ShortNickName: "Example Printer"
+*DefaultOutputOrder: Normal
+*ColorDevice: False
+*cupsVersion: 2.4
+*cupsSNMPSupplies: False
+*cupsLanguages: "en"
+*APSupplies: "https://localhost:8631/"
+*cupsSingleFile: True
+*cupsFilter2: "image/urf image/urf 0 -"
+*cupsFilter2: "image/jpeg image/jpeg 0 -"
+*cupsManualCopies: True
+*cupsUrfSupported: "CP1,IS1-4-5-19,MT1-2-3-4-5-6,RS600,V1.4,W8"
+*OpenUI *PageSize/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: Letter
+*PageSize A4/A4: "<</PageSize[595.275590551181 841.889763779528]>>setpagedevice"
+*PageSize Env10/Envelope #10: "<</PageSize[296.985826771654 684]>>setpagedevice"
+*PageSize EnvDL/Envelope DL: "<</PageSize[311.811023622047 623.622047244094]>>setpagedevice"
+*PageSize Legal/US Legal: "<</PageSize[612 1008]>>setpagedevice"
+*PageSize Letter/US Letter: "<</PageSize[612 792]>>setpagedevice"
+*CloseUI: *PageSize
+*OpenUI *PageRegion/Media Size: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: Letter
+*PageRegion A4/A4: "<</PageSize[595.275590551181 841.889763779528]>>setpagedevice"
+*PageRegion Env10/Envelope #10: "<</PageSize[296.985826771654 684]>>setpagedevice"
+*PageRegion EnvDL/Envelope DL: "<</PageSize[311.811023622047 623.622047244094]>>setpagedevice"
+*PageRegion Legal/US Legal: "<</PageSize[612 1008]>>setpagedevice"
+*PageRegion Letter/US Letter: "<</PageSize[612 792]>>setpagedevice"
+*CloseUI: *PageRegion
+*DefaultImageableArea: Letter
+*DefaultPaperDimension: Letter
+*ImageableArea A4: "9.637795275591 18 585.637795275591 823.889763779528"
+*PaperDimension A4: "595.275590551181 841.889763779528"
+*ImageableArea Env10: "18 18 278.985826771654 666"
+*PaperDimension Env10: "296.985826771654 684"
+*ImageableArea EnvDL: "18 18 293.811023622047 605.622047244094"
+*PaperDimension EnvDL: "311.811023622047 623.622047244094"
+*ImageableArea Legal: "18 18 594 990"
+*PaperDimension Legal: "612 1008"
+*ImageableArea Letter: "18 18 594 774"
+*PaperDimension Letter: "612 792"
+*OpenUI *InputSlot/Media Source: PickOne
+*OrderDependency: 10 AnySetup *InputSlot
+*DefaultInputSlot: Main
+*InputSlot Auto: "<</MediaPosition 0>>setpagedevice"
+*en_ZA.InputSlot Auto/Automatic: ""
+*InputSlot Main: "<</MediaPosition 1>>setpagedevice"
+*en_ZA.InputSlot Main/Main: ""
+*InputSlot Manual: "<</MediaPosition 4>>setpagedevice"
+*en_ZA.InputSlot Manual/Manual: ""
+*InputSlot ByPassTray: "<</MediaPosition 19>>setpagedevice"
+*en_ZA.InputSlot ByPassTray/By-pass Tray: ""
+*CloseUI: *InputSlot
+*OpenUI *MediaType/Media Type: PickOne
+*OrderDependency: 10 AnySetup *MediaType
+*DefaultMediaType: Stationery
+*MediaType Auto: "<</MediaType(Auto)>>setpagedevice"
+*en_ZA.MediaType Auto/Automatic: ""
+*MediaType Cardstock: "<</MediaType(Cardstock)>>setpagedevice"
+*en_ZA.MediaType Cardstock/Cardstock: ""
+*MediaType Envelope: "<</MediaType(Envelope)>>setpagedevice"
+*en_ZA.MediaType Envelope/Envelope: ""
+*MediaType Labels: "<</MediaType(Labels)>>setpagedevice"
+*en_ZA.MediaType Labels/Labels: ""
+*MediaType Other: "<</MediaType(Other)>>setpagedevice"
+*en_ZA.MediaType Other/Other: ""
+*MediaType Stationery: "<</MediaType(Stationery)>>setpagedevice"
+*en_ZA.MediaType Stationery/Stationery: ""
+*MediaType StationeryLetterhead: "<</MediaType(StationeryLetterhead)>>setpagedevice"
+*en_ZA.MediaType StationeryLetterhead/Letterhead: ""
+*MediaType Transparency: "<</MediaType(Transparency)>>setpagedevice"
+*en_ZA.MediaType Transparency/Transparency: ""
+*CloseUI: *MediaType
+*% ColorModel from print-color-mode-supported
+*OpenUI *ColorModel/Print Color Mode: PickOne
+*OrderDependency: 10 AnySetup *ColorModel
+*ColorModel Gray/Monochrome: ""
+*DefaultColorModel: Gray
+*CloseUI: *ColorModel
+*OpenUI *OutputBin/Output Tray: PickOne
+*OrderDependency: 10 AnySetup *OutputBin
+*DefaultOutputBin: FaceDown
+*OutputBin FaceDown: ""
+*en_ZA.OutputBin FaceDown/Face Down: ""
+*PageStackOrder FaceDown: Normal
+*CloseUI: *OutputBin
+*OpenUI *cupsFinishingTemplate/Finishing Template: PickOne
+*OrderDependency: 10 AnySetup *cupsFinishingTemplate
+*DefaultcupsFinishingTemplate: None
+*cupsFinishingTemplate None/None: ""
+*CloseUI: *cupsFinishingTemplate
+*DefaultResolution: 600dpi
+*OpenUI *cupsPrintQuality/Print Quality: PickOne
+*OrderDependency: 10 AnySetup *cupsPrintQuality
+*DefaultcupsPrintQuality: Normal
+*cupsPrintQuality Draft/Draft: "<</HWResolution[600 600]>>setpagedevice"
+*cupsPrintQuality Normal/Normal: "<</HWResolution[600 600]>>setpagedevice"
+*cupsPrintQuality High/High: "<</HWResolution[600 600]>>setpagedevice"
+*CloseUI: *cupsPrintQuality

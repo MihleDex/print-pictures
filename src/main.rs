@@ -6,10 +6,16 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 #[derive(Parser)]
-#[command(name = "print-pictures", version)]
+#[command(
+    name = "print-pictures",
+    version,
+    args_conflicts_with_subcommands = true
+)]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
+    /// Pictures to print; opens the window
+    files: Vec<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -173,7 +179,11 @@ fn print(
 }
 
 fn main() -> ExitCode {
-    match Cli::parse().command {
+    let cli = Cli::parse();
+    let Some(command) = cli.command else {
+        return ExitCode::from(print_pictures::ui::run(cli.files).get());
+    };
+    match command {
         Command::Printers => list_printers(),
         Command::Print {
             job,

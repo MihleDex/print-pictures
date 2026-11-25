@@ -2,7 +2,7 @@
 
 use crate::image_source::{LoadError, Raster, load, probe};
 use crate::layout::{LayoutId, Paper, RectMm, paginate, slots};
-use crate::render::{draw_caption, draw_picture, fit, split_caption};
+use crate::render::{draw_caption, draw_picture, fit, slot_areas};
 use crate::sharpen::sharpen;
 use std::path::{Path, PathBuf};
 
@@ -111,12 +111,7 @@ fn write_pages(spec: &JobSpec, files: &[PathBuf], out: &Path) -> Result<usize, P
     for page in &pages {
         for placement in page {
             let path = &files[placement.image];
-            let (area, strip) = if spec.layout == LayoutId::ContactSheet {
-                let (area, strip) = split_caption(placement.slot);
-                (area, Some(strip))
-            } else {
-                (placement.slot, None)
-            };
+            let (area, strip) = slot_areas(spec.layout, placement.slot);
             let raster = match decoded.take() {
                 Some((image, raster)) if image == placement.image => raster,
                 _ => load_for(path, area, spec.sharpen)

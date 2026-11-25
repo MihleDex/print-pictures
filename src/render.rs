@@ -1,7 +1,7 @@
 //! Fit rules and cairo drawing, shared by the preview and the print PDF.
 
 use crate::image_source::Raster;
-use crate::layout::RectMm;
+use crate::layout::{LayoutId, RectMm};
 use pangocairo::pango;
 use std::f64::consts::FRAC_PI_2;
 
@@ -47,6 +47,16 @@ pub fn split_caption(slot: RectMm) -> (RectMm, RectMm) {
         ..slot
     };
     (picture, strip)
+}
+
+/// Where the picture goes in a slot, and the file name strip if the layout has one.
+pub fn slot_areas(layout: LayoutId, slot: RectMm) -> (RectMm, Option<RectMm>) {
+    if layout == LayoutId::ContactSheet {
+        let (picture, strip) = split_caption(slot);
+        (picture, Some(strip))
+    } else {
+        (slot, None)
+    }
 }
 
 /// Draws onto a context whose user units are millimetres.
@@ -168,6 +178,16 @@ mod tests {
         assert!(f.image.x >= SLOT.x - 1e-9 && f.image.y >= SLOT.y - 1e-9);
         assert!(f.image.x + f.image.w <= SLOT.x + SLOT.w + 1e-9);
         assert!(f.image.y + f.image.h <= SLOT.y + SLOT.h + 1e-9);
+    }
+
+    #[test]
+    fn only_the_contact_sheet_has_a_name_strip() {
+        assert_eq!(slot_areas(LayoutId::Wallet, SLOT), (SLOT, None));
+        let (picture, strip) = split_caption(SLOT);
+        assert_eq!(
+            slot_areas(LayoutId::ContactSheet, SLOT),
+            (picture, Some(strip))
+        );
     }
 
     #[test]

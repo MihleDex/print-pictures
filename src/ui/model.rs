@@ -8,6 +8,16 @@ use crate::settings::{PrinterPrefs, Settings};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+/// The remembered printer if it still exists, else the default, else the first.
+pub fn preferred_printer(printers: &[Printer], settings: &Settings) -> Option<usize> {
+    settings
+        .printer
+        .as_deref()
+        .and_then(|name| printers.iter().position(|p| p.name == name))
+        .or_else(|| printers.iter().position(|p| p.is_default))
+        .or_else(|| (!printers.is_empty()).then_some(0))
+}
+
 pub struct Model {
     checked: Checked,
     printers: Vec<Printer>,
@@ -28,12 +38,7 @@ impl Model {
         caps_of: Box<dyn Fn(&str) -> PrinterCaps>,
         settings: Settings,
     ) -> Model {
-        let selected = settings
-            .printer
-            .as_deref()
-            .and_then(|name| printers.iter().position(|p| p.name == name))
-            .or_else(|| printers.iter().position(|p| p.is_default))
-            .or_else(|| (!printers.is_empty()).then_some(0));
+        let selected = preferred_printer(&printers, &settings);
         let caps = selected.map_or_else(PrinterCaps::fallback, |i| caps_of(&printers[i].name));
         Model {
             checked,

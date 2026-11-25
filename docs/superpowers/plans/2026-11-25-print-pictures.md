@@ -341,8 +341,8 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
 **Interfaces — Consumes:** `Model`, `render::*`, `image_source::load`, `job::build_pdf`, `cups::submit`.
 **Produces:** `pub fn run(files: Vec<PathBuf>) -> glib::ExitCode;` — used by `print-pictures FILES...`; `pub fn turn_view(page: &PagePlan, fits: &[Fit]) -> bool;` (true only for a one-slot page whose picture is turned).
 
-- [ ] **Step 1:** Write failing tests for `turn_view`: one slot turned → true; one slot unturned → false; two turned slots → false. Implement; `cargo test` → PASS.
-- [ ] **Step 2: Build the window** exactly as the spec sketch, default size 735×550. Requirements:
+- [x] **Step 1:** Write failing tests for `turn_view`: one slot turned → true; one slot unturned → false; two turned slots → false. Implement; `cargo test` → PASS.
+- [x] **Step 2: Build the window** exactly as the spec sketch, default size 735×550. Requirements:
   - Application flags `NON_UNIQUE` (each right-click gets its own window) and `run_with_args::<&str>(&[])` so GTK ignores file arguments.
   - Quality and Paper type are hidden when the printer has none.
   - Sidebar entries: a small page drawing of the slot rectangles plus the caption; the selection is highlighted.
@@ -353,7 +353,7 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
   - Enter prints, Escape cancels, Left/Right page.
 - [ ] **Step 3: Verify on screen (Human check).** You: start `cargo run -- <12 pictures, including a portrait phone photo>` in the background, bring it forward with `wmctrl -a "Print Pictures"`, capture it with `xfce4-screenshooter -w -s <file.png>` and compare with the spec sketch. Your human partner: check every layout, both fit states, paging, copies = 3, printing to `PDF` (preview must match the file in `~/PDF`), a run with one bad file, and a run with 200+ pictures (window visible in about a second).
 - [ ] **Step 4:** Ask your human partner to try it and say what differs from what they remember.
-- [ ] **Step 5:** Commit `feat: print pictures window`.
+- [x] **Step 5:** Commit `feat: print pictures window`.
 
 ---
 

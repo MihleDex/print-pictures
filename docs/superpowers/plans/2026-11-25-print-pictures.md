@@ -197,7 +197,7 @@ Command: `print-pictures render --layout <id> [--paper A4|A3|Letter|A6] [--copie
 - [ ] **Step 6: Early look (Human check).** Ask your human partner for a few of their own pictures, then render every layout:
   `mkdir -p target/layout-check && for l in full 20x25 13x18 10x15 9x13 wallet contact; do cargo run -- render --layout $l -o target/layout-check/$l.pdf <pictures>; done`
   Also render one layout with `--no-sharpen`. Ask them to compare with what they remember (holding a printed page against a frame if they can): picture sizes, metric captions such as "13 x 18 cm (2)", file names on the contact sheet, sharpening on by default. Record each answer under "Not yet confirmed" in the spec. If a size or caption changes, update the spec's layout table and Task 1's tests before going on.
-- [ ] **Step 7: Measure a big job.** Run:
+- [x] **Step 7: Measure a big job.** Run:
   ```sh
   mkdir -p target/timing
   i=0; while [ $i -lt 200 ]; do for f in /usr/share/backgrounds/*/*.jpg; do [ $i -lt 200 ] || break; i=$((i+1)); ln -sf "$f" target/timing/$i.jpg; done; done

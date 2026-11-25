@@ -140,17 +140,17 @@ pub fn add_exif_orientation(jpeg: &Path, orientation: u8);
 `add_exif_orientation` inserts these bytes right after the first two bytes of the file (`XX` = orientation):
 `FF E1 00 22 45 78 69 66 00 00 4D 4D 00 2A 00 00 00 08 00 01 01 12 00 03 00 00 00 01 00 XX 00 00 00 00 00 00`
 
-- [ ] **Step 1: Write the failing tests** (`tests/image_source.rs`):
+- [x] **Step 1: Write the failing tests** (`tests/image_source.rs`):
   - `exif_6_is_turned_upright`: 40×20 JPEG, left half red, right blue, orientation 6 → loaded 20×40; pixel (10,5) reddish, (10,35) bluish.
   - `reduced_load_keeps_orientation`: 4000×2000, orientation 6, `load(p, 400, 200)` → 200×400.
   - `never_enlarges`: 40×20 with `load(p, 4000, 2000)` → 40×20.
   - `transparency_becomes_white`: fully transparent PNG → `[255,255,255]`; black at alpha 128 → each channel within 126..=129.
   - `embedded_profile_is_converted`: build with lcms2 an RGB profile whose red and blue primaries are swapped relative to sRGB; save a pure-red JPEG carrying it (pixbuf `savev` options `quality` = `95` and `icc-profile` = base64 of the profile) → loaded pixel has b > 200 and r < 60. It must be JPEG: gdk-pixbuf 2.42.10 refuses to save a PNG with an RGB profile.
   - `bad_files`: a text file named `x.jpg` → `Unsupported`; a missing path → `Unreadable`.
-- [ ] **Step 2:** `cargo test --test image_source` → FAIL.
-- [ ] **Step 3: Implement.** gdk-pixbuf only. Scale `s = max(cover_long / long, cover_short / short).min(1.0)` from `probe`; load with `from_file_at_scale`; read the `icc-profile` option *before* `apply_embedded_orientation`; convert with lcms2; composite alpha onto white; strip row padding.
-- [ ] **Step 4:** `cargo test --test image_source` → PASS.
-- [ ] **Step 5:** Commit `feat: picture loading`.
+- [x] **Step 2:** `cargo test --test image_source` → FAIL.
+- [x] **Step 3: Implement.** gdk-pixbuf only. Scale `s = max(cover_long / long, cover_short / short).min(1.0)` from `probe`; load with `from_file_at_scale`; read the `icc-profile` option *before* `apply_embedded_orientation`; convert with lcms2; composite alpha onto white; strip row padding.
+- [x] **Step 4:** `cargo test --test image_source` → PASS.
+- [x] **Step 5:** Commit `feat: picture loading`.
 
 ---
 

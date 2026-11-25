@@ -73,9 +73,11 @@ fn save_job(spec: JobSpec, work: &Path, dest: &Path) -> Result<Vec<(PathBuf, Str
 fn put(from: &Path, dest: &Path) -> std::io::Result<()> {
     let mut file = tempfile::NamedTempFile::new_in(dest.parent().unwrap_or(Path::new(".")))?;
     std::io::copy(&mut std::fs::File::open(from)?, &mut file)?;
-    // A document the user saves is readable like any other, unlike a temporary file.
-    let readable = std::fs::Permissions::from_mode(0o644);
-    file.as_file().set_permissions(readable)?;
+    // A document the user saves is readable like any other, unlike a temporary
+    // file. A network share may refuse the change; the save matters more.
+    let _ = file
+        .as_file()
+        .set_permissions(std::fs::Permissions::from_mode(0o644));
     file.persist(dest).map_err(|e| e.error)?;
     Ok(())
 }
@@ -900,6 +902,21 @@ mod tests {
         set(0o700);
         let message = result.unwrap_err();
         assert!(message.contains("x.pdf"), "{message}");
+    }
+
+    // A network share can refuse permission changes. To see it refused, run the
+    // built test program as
+    // `strace -f -qq -o /dev/null -e inject=fchmod:error=EOPNOTSUPP PROGRAM --ignored refused`.
+    #[test]
+    #[ignore = "only meaningful under strace; see the comment above"]
+    fn a_refused_permission_change_still_saves() {
+        let pictures = tempfile::tempdir().unwrap();
+        let work = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let (spec, _) = job(vec![picture_in(pictures.path())]);
+        let dest = target.path().join("x.pdf");
+        save_job(spec, work.path(), &dest).unwrap();
+        assert!(dest.exists());
     }
 
     // Neither case sends anything, so no printer is needed.

@@ -1,0 +1,16 @@
+[package]
+name = "print-pictures"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gtk4 = { version = "0.11", features = ["v4_14"] }
+cairo-rs = { version = "0.22", features = ["pdf"] }
+pangocairo = "0.22"
+gdk-pixbuf = "0.22"
+lcms2 = "6.3"
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+clap = { version = "4.6", features = ["derive"] }
+thiserror = "2"
+tempfile = "3"

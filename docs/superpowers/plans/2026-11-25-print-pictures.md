@@ -79,9 +79,9 @@ pub fn paginate(layout: LayoutId, paper: &Paper, image_count: usize, copies: u32
 ```
 All structs and enums derive `Clone, Debug, PartialEq`; geometry types and `LayoutId` also `Copy`.
 
-- [ ] **Step 1:** Ask your human partner to run `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf`. Verify: `pkg-config --modversion gtk4` prints `4.14.x` and `lpstat -v` lists `PDF`. Also verify `git var GIT_AUTHOR_IDENT` exits 0; if not, ask them to set `user.name` and `user.email` (never choose these yourself).
-- [ ] **Step 2:** `git init` (skip if already a repository) and commit `CLAUDE.md`, `docs/` and `plans/` as `docs: print pictures spec and plan`; then create the package with every dependency from Tech Stack, `.gitignore` containing `/target`, an empty `main`. Run `cargo build`. Expected: success.
-- [ ] **Step 3: Write the failing tests** in `src/layout.rs`:
+- [x] **Step 1:** Ask your human partner to run `sudo apt install libgtk-4-dev liblcms2-dev printer-driver-cups-pdf`. Verify: `pkg-config --modversion gtk4` prints `4.14.x` and `lpstat -v` lists `PDF`. Also verify `git var GIT_AUTHOR_IDENT` exits 0; if not, ask them to set `user.name` and `user.email` (never choose these yourself).
+- [x] **Step 2:** `git init` (skip if already a repository) and commit `CLAUDE.md`, `docs/` and `plans/` as `docs: print pictures spec and plan`; then create the package with every dependency from Tech Stack, `.gitignore` containing `/target`, an empty `main`. Run `cargo build`. Expected: success.
+- [x] **Step 3: Write the failing tests** in `src/layout.rs`:
 
 ```rust
 fn a4() -> Paper { Paper::a4(Margins::default()) }
@@ -114,10 +114,10 @@ fn counts(p: &Paper) -> Vec<usize> { LayoutId::ALL.iter().map(|&l| slots(l, p).l
 }
 #[test] fn nothing_to_paginate() { assert!(paginate(LayoutId::Wallet, &a4(), 0, 1).is_empty()); }
 ```
-- [ ] **Step 4:** `cargo test layout` → FAIL (unresolved items).
-- [ ] **Step 5: Implement.** For sized layouts, on the *nominal* area (paper less 5 mm each side) try the catalogue size and its quarter turn; `cols = floor((avail_w + GAP) / (w + GAP))`, rows likewise; keep the larger `cols*rows`, ties to unturned. If zero but the size fits the paper itself (either way, 2 mm tolerance), use 1×1. Then centre the block in `printable()`, scaling uniformly down if it does not fit. Full page = `printable()`. Contact sheet divides `printable()` ∩ nominal area into 5×7 cells with the same gap.
-- [ ] **Step 6:** `cargo test layout` → PASS.
-- [ ] **Step 7:** Commit `feat: layout engine`.
+- [x] **Step 4:** `cargo test layout` → FAIL (unresolved items).
+- [x] **Step 5: Implement.** For sized layouts, on the *nominal* area (paper less 5 mm each side) try the catalogue size and its quarter turn; `cols = floor((avail_w + GAP) / (w + GAP))`, rows likewise; keep the larger `cols*rows`, ties to unturned. If zero but the size fits the paper itself (either way, 2 mm tolerance), use 1×1. Then centre the block in `printable()`, scaling uniformly down if it does not fit. Full page = `printable()`. Contact sheet divides `printable()` ∩ nominal area into 5×7 cells with the same gap.
+- [x] **Step 6:** `cargo test layout` → PASS.
+- [x] **Step 7:** Commit `feat: layout engine`.
 
 ---
 

@@ -158,6 +158,7 @@ mod tests {
             name: "Office".into(),
             is_default: true,
             stopped: false,
+            saves_to_file: false,
         }];
         let caps =
             |_: &str| ppd::parse(include_str!("../../tests/fixtures/photo-printer.ppd")).unwrap();

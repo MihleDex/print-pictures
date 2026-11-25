@@ -6,7 +6,7 @@ use crate::layout::{LayoutId, PagePlan, label, paginate, slots};
 use crate::ppd::{PaperChoice, PrinterCaps, PrinterOption};
 use crate::settings::{PrinterPrefs, Settings};
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// The remembered printer if it still exists, else the default, else the first.
 pub fn preferred_printer(printers: &[Printer], settings: &Settings) -> Option<usize> {
@@ -16,6 +16,15 @@ pub fn preferred_printer(printers: &[Printer], settings: &Settings) -> Option<us
         .and_then(|name| printers.iter().position(|p| p.name == name))
         .or_else(|| printers.iter().position(|p| p.is_default))
         .or_else(|| (!printers.is_empty()).then_some(0))
+}
+
+/// What the dialog offers for a printer. One that writes files gets no driver
+/// settings, because the app writes the file itself.
+fn offered(printer: &Printer, mut caps: PrinterCaps) -> PrinterCaps {
+    if printer.saves_to_file {
+        caps.options.clear();
+    }
+    caps
 }
 
 pub struct Model {
@@ -39,7 +48,9 @@ impl Model {
         settings: Settings,
     ) -> Model {
         let selected = preferred_printer(&printers, &settings);
-        let caps = selected.map_or_else(PrinterCaps::fallback, |i| caps_of(&printers[i].name));
+        let caps = selected.map_or_else(PrinterCaps::fallback, |i| {
+            offered(&printers[i], caps_of(&printers[i].name))
+        });
         Model {
             checked,
             printers,
@@ -102,7 +113,7 @@ impl Model {
     pub fn set_printer(&mut self, name: &str) {
         if let Some(i) = self.printers.iter().position(|p| p.name == name) {
             self.selected = Some(i);
-            self.caps = (self.caps_of)(name);
+            self.caps = offered(&self.printers[i], (self.caps_of)(name));
         }
     }
 
@@ -277,6 +288,36 @@ impl Model {
         Some((spec, request))
     }
 
+    pub fn saves_to_file(&self) -> bool {
+        self.printer().is_some_and(|p| p.saves_to_file)
+    }
+
+    /// Where "Save As" starts: the folder and the file name.
+    pub fn pdf_suggestion(&self) -> (PathBuf, String) {
+        let first = self.files().first();
+        let beside_pictures = || {
+            let folder = first?.parent()?;
+            let here = folder.as_os_str().is_empty();
+            Some(if here { Path::new(".") } else { folder }.to_path_buf())
+        };
+        let folder = self
+            .settings
+            .pdf_folder
+            .clone()
+            .filter(|folder| folder.is_dir())
+            .or_else(beside_pictures)
+            .unwrap_or_default();
+        let stem = first
+            .and_then(|file| file.file_stem())
+            .map_or_else(|| "Pictures".into(), |stem| stem.to_string_lossy());
+        (folder, format!("{stem}.pdf"))
+    }
+
+    pub fn set_pdf_folder(&mut self, folder: PathBuf) {
+        // The settings file is text; a folder that is not cannot be written to it.
+        self.settings.pdf_folder = folder.to_str().is_some().then_some(folder);
+    }
+
     /// What to remember for next time.
     pub fn settings(&self) -> Settings {
         let mut settings = self.settings.clone();
@@ -318,6 +359,7 @@ mod tests {
             name: name.into(),
             is_default,
             stopped: false,
+            saves_to_file: false,
         }
     }
 
@@ -511,6 +553,51 @@ mod tests {
         );
         // A printer that could not be asked just now must not lose its choices.
         assert_eq!(m.settings().printers["Office"], prefs);
+    }
+
+    #[test]
+    fn a_file_printer_offers_no_driver_settings() {
+        let file = Printer {
+            saves_to_file: true,
+            ..printer("Office", true)
+        };
+        let mut settings = Settings::default();
+        let prefs = PrinterPrefs {
+            paper: None,
+            options: [("MediaType".into(), "Glossy".into())].into(),
+        };
+        settings.printers.insert("Office".into(), prefs.clone());
+        let m = model_with(1, vec![file], settings);
+        assert!(m.saves_to_file() && !model(1).saves_to_file());
+        assert!(m.caps().quality().is_none() && m.caps().paper_type().is_none());
+        assert!(m.advanced_options().is_empty());
+        assert!(m.job().unwrap().1.options.is_empty());
+        assert_eq!(m.caps().papers.len(), 2, "paper sizes still apply");
+        assert_eq!(
+            m.settings().printers["Office"],
+            prefs,
+            "saved values are kept"
+        );
+    }
+
+    #[test]
+    fn the_pdf_name_and_folder_suggested() {
+        let checked = Checked {
+            usable: vec!["/p/Ünï 100%.v2.jpeg".into()],
+            rejected: Vec::new(),
+        };
+        let printers = vec![printer("PDF", true)];
+        let mut m = Model::new(checked, printers, Box::new(photo_caps), Settings::default());
+        assert_eq!(
+            m.pdf_suggestion(),
+            (PathBuf::from("/p"), "Ünï 100%.v2.pdf".to_string())
+        );
+        let dir = tempfile::tempdir().unwrap();
+        m.set_pdf_folder(dir.path().into());
+        assert_eq!(m.pdf_suggestion().0, dir.path());
+        assert_eq!(m.settings().pdf_folder.as_deref(), Some(dir.path()));
+        m.set_pdf_folder("/gone/away".into());
+        assert_eq!(m.pdf_suggestion().0, PathBuf::from("/p"));
     }
 
     #[test]

@@ -227,6 +227,7 @@ mod tests {
             name: "P".into(),
             is_default: true,
             stopped: false,
+            saves_to_file: false,
         }];
         Model::new(
             checked,

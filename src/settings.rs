@@ -21,6 +21,8 @@ pub struct Settings {
     pub layout: LayoutId,
     pub fit_to_frame: bool,
     pub sharpen: bool,
+    /// Where a PDF was last saved.
+    pub pdf_folder: Option<PathBuf>,
     // Last, because TOML writes tables after plain values.
     pub printers: BTreeMap<String, PrinterPrefs>,
 }
@@ -32,6 +34,7 @@ impl Default for Settings {
             layout: LayoutId::default(),
             fit_to_frame: true,
             sharpen: true,
+            pdf_folder: None,
             printers: BTreeMap::new(),
         }
     }
@@ -85,6 +88,7 @@ mod tests {
             layout: LayoutId::Wallet,
             fit_to_frame: false,
             sharpen: false,
+            pdf_folder: Some("/home/u/Documents".into()),
             printers: BTreeMap::new(),
         };
         settings.printers.insert(

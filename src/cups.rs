@@ -20,6 +20,8 @@ pub struct Printer {
     pub name: String,
     pub is_default: bool,
     pub stopped: bool,
+    /// The "printer" writes a PDF file instead of printing.
+    pub saves_to_file: bool,
 }
 
 /// Runs a CUPS tool in the C locale and returns its standard output.
@@ -49,6 +51,7 @@ pub fn parse_printers(names: &str, default: &str, status: &str) -> Vec<Printer> 
         .map(str::trim)
         .filter(|name| !name.is_empty())
         .map(|name| Printer {
+            saves_to_file: false,
             name: name.into(),
             is_default: default == Some(name),
             stopped: status.lines().any(|l| {
@@ -69,12 +72,26 @@ pub fn printers() -> Result<Vec<Printer>, PrintError> {
     // Both fail harmlessly when there is no default or no queue yet.
     let default = run("lpstat", &["-d"]).unwrap_or_default();
     let status = run("lpstat", &["-p"]).unwrap_or_default();
-    Ok(parse_printers(&names, &default, &status))
+    let devices = run("lpstat", &["-v"]).unwrap_or_default();
+    let mut printers = parse_printers(&names, &default, &status);
+    for printer in &mut printers {
+        printer.saves_to_file = file_printer(&devices, &printer.name);
+    }
+    Ok(printers)
 }
 
 /// The queue behind a destination name, which may be "queue/instance".
 fn queue(name: &str) -> &str {
     name.split_once('/').map_or(name, |(queue, _)| queue)
+}
+
+/// Whether `lpstat -v` shows the printer as the one that writes PDF files.
+pub fn file_printer(devices: &str, name: &str) -> bool {
+    devices.lines().any(|line| {
+        line.strip_prefix("device for ")
+            .and_then(|rest| rest.strip_prefix(queue(name)))
+            .is_some_and(|rest| rest.starts_with(": cups-pdf:"))
+    })
 }
 
 fn ppd_path(name: &str) -> String {
@@ -242,6 +259,16 @@ mod tests {
             Some("PDF-3".into())
         );
         assert_eq!(parse_job_id("something else"), None);
+    }
+
+    #[test]
+    fn only_the_pdf_file_backend_saves_to_file() {
+        let devices = "device for PDF: cups-pdf:/\ndevice for Office: ipp://host/ipp\ndevice for PDF2: usb://x\n";
+        assert!(file_printer(devices, "PDF"));
+        assert!(file_printer(devices, "PDF/draft"));
+        for other in ["Office", "PDF2", "PD", "Missing"] {
+            assert!(!file_printer(devices, other), "{other}");
+        }
     }
 
     #[test]

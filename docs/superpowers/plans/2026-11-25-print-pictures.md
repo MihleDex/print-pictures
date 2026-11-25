@@ -317,7 +317,7 @@ impl Model {
 ```
 Notices, one per line: "No printers are installed." / "Printer <name> is stopped." / "Skipped: <file names>".
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - Settings round-trip; a corrupt or missing file gives defaults.
   - Remembered printer `Gone` with printers `[Office, PDF(default)]` → `PDF` selected.
   - No printers → `!can_print()`, `job()` is `None`, notice contains "No printers are installed.", `pages()` still non-empty.
@@ -329,8 +329,8 @@ Notices, one per line: "No printers are installed." / "Printer <name> is stopped
   - Paper and option choices are remembered per printer and restored on switching back; remembered values the printer no longer offers are ignored.
   - `job()` carries paper id, chosen options (including advanced ones), copies, fill, sharpen.
   - No usable files → `!can_print()`.
-- [ ] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement. **Step 4:** `cargo test` → PASS.
-- [ ] **Step 5:** Commit `feat: dialog model and settings`.
+- [x] **Step 2:** `cargo test` → FAIL. **Step 3:** Implement. **Step 4:** `cargo test` → PASS.
+- [x] **Step 5:** Commit `feat: dialog model and settings`.
 
 ---
 

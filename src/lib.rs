@@ -4,4 +4,6 @@ pub mod job;
 pub mod layout;
 pub mod ppd;
 pub mod render;
+pub mod settings;
 pub mod sharpen;
+pub mod ui;

@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-As of 2026-11-25 all nine tasks of the plan are coded on branch `print-pictures`. Still open: the user's hands-on checks of the window (Task 7) and settings dialogs (Task 8), installing into their Thunar (Task 9 Step 6), the final review, and printing on real hardware.
+As of 2026-11-25 all nine tasks of the plan are coded on branch `print-pictures`. Still open: the user's hands-on checks of the window (Task 7) and settings dialogs (Task 8), their right-click check in Thunar (Task 9 Step 6), the final review, and printing on real hardware.
+
+Installed on this machine on 2026-11-25. The installed program is a copy: after changing code, run `cargo run --release -- install` again.
 
 - `docs/superpowers/specs/2026-11-25-print-pictures-design.md`: what to build and why, including what the user has confirmed.
 - `docs/superpowers/plans/2026-11-25-print-pictures.md`: the nine tasks; unticked boxes are what is left.

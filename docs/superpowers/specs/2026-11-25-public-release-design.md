@@ -130,7 +130,9 @@ Icon art, packaging tool, the exact content of each file-manager file (checked
 against that file manager), and dropping Caja to "Open With" if it cannot be done
 cleanly.
 
-## Open for the user
+## Decided by the user (2026-11-25)
 
-- Rename the repository? "LinuxPPT" reads as PowerPoint to many Windows users.
-- Licence: GPL version 3 only, or "version 3 or any later version"?
+- Design approved.
+- Rename the repository to `print-pictures`.
+- Licence: GPL version 3 or any later version (`GPL-3.0-or-later`). The user
+  answered "later" to "version 3 only, or any later version?".

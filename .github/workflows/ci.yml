@@ -1,0 +1,27 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and test packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev liblcms2-dev poppler-utils cups cups-client desktop-file-utils appstream
+          # Two tests ask the print service about a printer that does not exist.
+          sudo systemctl start cups
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt
+          rustup default stable
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+      - run: desktop-file-validate data/*.desktop
+      - run: appstreamcli validate --no-net data/*.metainfo.xml

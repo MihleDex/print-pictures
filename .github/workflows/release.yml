@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and test packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev liblcms2-dev poppler-utils cups cups-client desktop-file-utils appstream
+          sudo systemctl start cups
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - run: cargo test
+      - run: cargo install cargo-deb --locked
+      - run: cargo deb
+      - name: The package installs on newer systems and brings no file manager
+        run: |
+          for image in debian:13 ubuntu:26.04; do
+            docker run --rm -v "$PWD/target/debian:/d" "$image" sh -c \
+              "apt-get update && apt-get install -y /d/*.deb && print-pictures --version && ! dpkg -l caja nautilus nemo dolphin thunar 2>/dev/null | grep -q '^ii'"
+          done
+      - name: Checksums
+        run: cd target/debian && sha256sum *.deb > SHA256SUMS
+      - name: Publish a preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" target/debian/*.deb target/debian/SHA256SUMS --prerelease --generate-notes

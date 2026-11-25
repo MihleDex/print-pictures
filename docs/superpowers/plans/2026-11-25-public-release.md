@@ -208,9 +208,9 @@ The `.desktop` entry: `Name=Print Pictures`, `Exec=print-pictures %F`, `Icon=io.
 
 **Files:** Create `.github/workflows/ci.yml`, `.github/workflows/release.yml`.
 
-- [ ] **Step 1: `ci.yml`** on push and pull request, `runs-on: ubuntu-24.04`: install `libgtk-4-dev liblcms2-dev poppler-utils cups cups-client desktop-file-utils appstream`; `sudo systemctl start cups` (two tests need it); stable Rust; `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `cargo test`; the two validators from Task 4.
-- [ ] **Step 2: `release.yml`** on tags `v*`, `permissions: contents: write`: same setup and tests; `cargo install cargo-deb --locked`; `cargo deb`; for each of `debian:13` and `ubuntu:26.04`, `docker run --rm -v "$PWD/target/debian:/d" IMAGE sh -c "apt-get update && apt-get install -y /d/*.deb && print-pictures --version && ! dpkg -l caja nautilus nemo dolphin thunar 2>/dev/null | grep -q '^ii'"` (the last part fails if a file manager was pulled in); `cd target/debian && sha256sum *.deb > SHA256SUMS`, so the file names carry no folder; `gh release create "$GITHUB_REF_NAME" target/debian/*.deb target/debian/SHA256SUMS --prerelease --generate-notes` with `GH_TOKEN: ${{ github.token }}`.
-- [ ] **Step 3:** Commit `ci: build, test and release`.
+- [x] **Step 1: `ci.yml`** on push and pull request, `runs-on: ubuntu-24.04`: install `libgtk-4-dev liblcms2-dev poppler-utils cups cups-client desktop-file-utils appstream`; `sudo systemctl start cups` (two tests need it); stable Rust; `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `cargo test`; the two validators from Task 4.
+- [x] **Step 2: `release.yml`** on tags `v*`, `permissions: contents: write`: same setup and tests; `cargo install cargo-deb --locked`; `cargo deb`; for each of `debian:13` and `ubuntu:26.04`, `docker run --rm -v "$PWD/target/debian:/d" IMAGE sh -c "apt-get update && apt-get install -y /d/*.deb && print-pictures --version && ! dpkg -l caja nautilus nemo dolphin thunar 2>/dev/null | grep -q '^ii'"` (the last part fails if a file manager was pulled in); `cd target/debian && sha256sum *.deb > SHA256SUMS`, so the file names carry no folder; `gh release create "$GITHUB_REF_NAME" target/debian/*.deb target/debian/SHA256SUMS --prerelease --generate-notes` with `GH_TOKEN: ${{ github.token }}`.
+- [x] **Step 3:** Commit `ci: build, test and release`.
 - [ ] **Step 4:** With the user's OK, push; the CI run on GitHub is green. If it is not, fix the cause and push again.
 
 ---

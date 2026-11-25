@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-As of 2026-11-25 the app is coded on `main`, including "Save As" for PDF printers, has had one review of the whole branch, and is installed on this machine. Still open: the user's hands-on checks (main plan Tasks 7–9, save-PDF plan Step 8), pushing to `origin` (GitHub), and printing on real hardware.
+As of 2026-11-25 the app is coded on `main`, including "Save As" for PDF printers, has had one review of the whole branch, and is installed on this machine. Still open: the user's hands-on checks (main plan Tasks 7–9, save-PDF plan Step 8) and printing on real hardware. `origin` is a public GitHub repository, so nothing private goes into a commit.
 
 - `docs/superpowers/specs/`: what to build and why, including what the user has confirmed.
 - `docs/superpowers/plans/`: the tasks; unticked boxes are what is left.

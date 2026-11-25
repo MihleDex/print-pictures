@@ -2,7 +2,7 @@
 
 use crate::cups::{Printer, SubmitRequest, job_title};
 use crate::job::{Checked, JobSpec};
-use crate::layout::{LayoutId, PagePlan, label, paginate, slots};
+use crate::layout::{LayoutId, PagePlan, Units, label, paginate, slots};
 use crate::ppd::{PaperChoice, PrinterCaps, PrinterOption};
 use crate::settings::{PrinterPrefs, Settings};
 use std::collections::BTreeMap;
@@ -38,6 +38,7 @@ pub struct Model {
     settings: Settings,
     copies: u32,
     page: usize,
+    units: Units,
 }
 
 impl Model {
@@ -60,7 +61,14 @@ impl Model {
             settings,
             copies: 1,
             page: 0,
+            units: Units::default(),
         }
+    }
+
+    /// Offers inch or metric sizes; metric unless told otherwise.
+    pub fn with_units(mut self, units: Units) -> Model {
+        self.units = units;
+        self
     }
 
     pub fn files(&self) -> &[PathBuf] {
@@ -142,17 +150,19 @@ impl Model {
 
     /// The layouts that fit the paper, with their captions.
     pub fn layouts(&self) -> Vec<(LayoutId, String)> {
-        LayoutId::ALL
+        LayoutId::offered(self.units)
             .into_iter()
             .filter(|&l| self.available(l))
             .map(|l| (l, label(l, &self.paper().paper)))
             .collect()
     }
 
-    /// The wanted layout, or full page while the paper cannot hold it.
+    /// The wanted layout in the units shown, or full page while the paper
+    /// cannot hold it.
     pub fn layout(&self) -> LayoutId {
-        if self.available(self.settings.layout) {
-            self.settings.layout
+        let wanted = self.settings.layout.in_units(self.units);
+        if self.available(wanted) {
+            wanted
         } else {
             LayoutId::FullPage
         }
@@ -598,6 +608,30 @@ mod tests {
         assert_eq!(m.settings().pdf_folder.as_deref(), Some(dir.path()));
         m.set_pdf_folder("/gone/away".into());
         assert_eq!(m.pdf_suggestion().0, PathBuf::from("/p"));
+    }
+
+    #[test]
+    fn the_remembered_size_follows_the_units() {
+        let wanted = |layout| Settings {
+            layout,
+            ..Settings::default()
+        };
+        let mut inch = model_with(3, vec![printer("PDF", true)], wanted(LayoutId::P13x18))
+            .with_units(Units::Inch);
+        assert_eq!(inch.layout(), LayoutId::P5x7in);
+        let offered: Vec<LayoutId> = inch.layouts().iter().map(|(l, _)| *l).collect();
+        assert_eq!(offered, LayoutId::offered(Units::Inch));
+        inch.set_layout(LayoutId::P4x6in);
+        assert_eq!(inch.job().unwrap().0.layout, LayoutId::P4x6in);
+
+        let metric = model_with(3, vec![printer("PDF", true)], inch.settings());
+        assert_eq!(metric.layout(), LayoutId::P10x15);
+        assert!(
+            metric
+                .layouts()
+                .iter()
+                .all(|(l, _)| LayoutId::offered(Units::Metric).contains(l))
+        );
     }
 
     #[test]

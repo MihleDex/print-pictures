@@ -4,6 +4,33 @@ use serde::{Deserialize, Serialize};
 
 pub const NOMINAL_MARGIN_MM: f64 = 5.0;
 pub const GAP_MM: f64 = 4.0;
+/// Which picture sizes are offered.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Units {
+    #[default]
+    Metric,
+    Inch,
+}
+
+/// Reads the output of `locale -k LC_PAPER`: Letter paper means inch sizes.
+pub fn units_from_locale(locale_paper: &str) -> Units {
+    let has = |line: &str| locale_paper.lines().any(|l| l.trim() == line);
+    if has("width=216") && has("height=279") {
+        Units::Inch
+    } else {
+        Units::Metric
+    }
+}
+
+pub fn system_units() -> Units {
+    std::process::Command::new("locale")
+        .args(["-k", "LC_PAPER"])
+        .output()
+        .map_or(Units::Metric, |out| {
+            units_from_locale(&String::from_utf8_lossy(&out.stdout))
+        })
+}
+
 /// How far a picture size may overhang the paper and still count as matching it.
 const PAPER_TOLERANCE_MM: f64 = 2.0;
 
@@ -64,18 +91,70 @@ pub enum LayoutId {
     P9x13,
     Wallet,
     ContactSheet,
+    P8x10in,
+    P5x7in,
+    P4x6in,
+    P35x5in,
 }
 
 impl LayoutId {
-    pub const ALL: [LayoutId; 7] = [
+    /// Every layout of both unit systems.
+    pub const ALL: [LayoutId; 11] = [
         LayoutId::FullPage,
         LayoutId::P20x25,
         LayoutId::P13x18,
         LayoutId::P10x15,
         LayoutId::P9x13,
+        LayoutId::P8x10in,
+        LayoutId::P5x7in,
+        LayoutId::P4x6in,
+        LayoutId::P35x5in,
         LayoutId::Wallet,
         LayoutId::ContactSheet,
     ];
+
+    /// The seven layouts shown, as Windows does for these units.
+    pub fn offered(units: Units) -> [LayoutId; 7] {
+        use LayoutId::*;
+        match units {
+            Units::Metric => [
+                FullPage,
+                P20x25,
+                P13x18,
+                P10x15,
+                P9x13,
+                Wallet,
+                ContactSheet,
+            ],
+            Units::Inch => [
+                FullPage,
+                P8x10in,
+                P5x7in,
+                P4x6in,
+                P35x5in,
+                Wallet,
+                ContactSheet,
+            ],
+        }
+    }
+
+    /// The nearest layout in `units`: 10 x 15 cm and 4 x 6 in stand for each other.
+    pub fn in_units(self, units: Units) -> LayoutId {
+        use LayoutId::*;
+        let pairs = [
+            (P20x25, P8x10in),
+            (P13x18, P5x7in),
+            (P10x15, P4x6in),
+            (P9x13, P35x5in),
+        ];
+        pairs
+            .iter()
+            .find(|(cm, inch)| *cm == self || *inch == self)
+            .map_or(self, |&(cm, inch)| match units {
+                Units::Metric => cm,
+                Units::Inch => inch,
+            })
+    }
 
     pub fn id(self) -> &'static str {
         match self {
@@ -84,6 +163,10 @@ impl LayoutId {
             LayoutId::P13x18 => "13x18",
             LayoutId::P10x15 => "10x15",
             LayoutId::P9x13 => "9x13",
+            LayoutId::P8x10in => "8x10in",
+            LayoutId::P5x7in => "5x7in",
+            LayoutId::P4x6in => "4x6in",
+            LayoutId::P35x5in => "3.5x5in",
             LayoutId::Wallet => "wallet",
             LayoutId::ContactSheet => "contact",
         }
@@ -103,6 +186,10 @@ pub fn slots(layout: LayoutId, paper: &Paper) -> Vec<RectMm> {
         LayoutId::P13x18 => (130.0, 180.0),
         LayoutId::P10x15 => (100.0, 150.0),
         LayoutId::P9x13 => (90.0, 130.0),
+        LayoutId::P8x10in => (203.2, 254.0),
+        LayoutId::P5x7in => (127.0, 177.8),
+        LayoutId::P4x6in => (101.6, 152.4),
+        LayoutId::P35x5in => (88.9, 127.0),
         LayoutId::Wallet => (57.15, 82.55),
     };
 
@@ -181,6 +268,10 @@ pub fn label(layout: LayoutId, paper: &Paper) -> String {
         LayoutId::P13x18 => "13 x 18 cm",
         LayoutId::P10x15 => "10 x 15 cm",
         LayoutId::P9x13 => "9 x 13 cm",
+        LayoutId::P8x10in => "8 x 10 in",
+        LayoutId::P5x7in => "5 x 7 in",
+        LayoutId::P4x6in => "4 x 6 in",
+        LayoutId::P35x5in => "3.5 x 5 in",
         LayoutId::Wallet => "Wallet",
         LayoutId::ContactSheet => "Contact sheet",
     };
@@ -219,6 +310,14 @@ pub fn paginate(layout: LayoutId, paper: &Paper, image_count: usize, copies: u32
 mod tests {
     use super::*;
 
+    fn metric() -> [LayoutId; 7] {
+        LayoutId::offered(Units::Metric)
+    }
+
+    fn letter() -> Paper {
+        sheet(215.9, 279.4)
+    }
+
     fn a4() -> Paper {
         Paper::a4(Margins::default())
     }
@@ -231,7 +330,7 @@ mod tests {
     }
 
     fn counts(p: &Paper) -> Vec<usize> {
-        LayoutId::ALL.iter().map(|&l| slots(l, p).len()).collect()
+        metric().iter().map(|&l| slots(l, p).len()).collect()
     }
 
     fn inside(r: RectMm, outer: RectMm) -> bool {
@@ -272,7 +371,7 @@ mod tests {
 
     #[test]
     fn ids_round_trip() {
-        let ids: Vec<&str> = LayoutId::ALL.iter().map(|l| l.id()).collect();
+        let ids: Vec<&str> = metric().iter().map(|l| l.id()).collect();
         assert_eq!(
             ids,
             [
@@ -337,6 +436,74 @@ mod tests {
             .map(|p| p.iter().map(|x| x.image).collect())
             .collect();
         assert_eq!(ids, [[0, 0], [1, 1], [2, 2]]);
+    }
+
+    #[test]
+    fn inch_layouts_on_letter_paper_match_windows() {
+        let offered = LayoutId::offered(Units::Inch);
+        let counts: Vec<usize> = offered.iter().map(|&l| slots(l, &letter()).len()).collect();
+        assert_eq!(counts, [1, 1, 2, 2, 4, 9, 35]);
+        let ids: Vec<&str> = offered.iter().map(|l| l.id()).collect();
+        assert_eq!(
+            ids,
+            [
+                "full", "8x10in", "5x7in", "4x6in", "3.5x5in", "wallet", "contact"
+            ]
+        );
+        assert_eq!(label(LayoutId::P4x6in, &letter()), "4 x 6 in (2)");
+        assert_eq!(label(LayoutId::P8x10in, &letter()), "8 x 10 in (1)");
+        assert_eq!(label(LayoutId::P5x7in, &letter()), "5 x 7 in (2)");
+        assert_eq!(label(LayoutId::P35x5in, &letter()), "3.5 x 5 in (4)");
+        assert_eq!(LayoutId::ALL.len(), 11);
+        for layout in LayoutId::ALL {
+            assert_eq!(LayoutId::from_id(layout.id()), Some(layout));
+        }
+    }
+
+    #[test]
+    fn a_4x6_picture_fills_4x6_paper() {
+        let s = slots(LayoutId::P4x6in, &sheet(101.6, 152.4));
+        assert_eq!(s.len(), 1);
+        assert!(
+            (s[0].w - 101.6).abs() < 1e-6 && (s[0].h - 152.4).abs() < 1e-6,
+            "{:?}",
+            s[0]
+        );
+        let s = slots(LayoutId::P4x6in, &letter());
+        assert_eq!((s[0].w, s[0].h), (152.4, 101.6));
+    }
+
+    #[test]
+    fn matching_sizes_across_units() {
+        use LayoutId::*;
+        for (cm, inch) in [
+            (P20x25, P8x10in),
+            (P13x18, P5x7in),
+            (P10x15, P4x6in),
+            (P9x13, P35x5in),
+        ] {
+            assert_eq!(cm.in_units(Units::Inch), inch);
+            assert_eq!(inch.in_units(Units::Metric), cm);
+            assert_eq!(
+                (cm.in_units(Units::Metric), inch.in_units(Units::Inch)),
+                (cm, inch)
+            );
+        }
+        for same in [FullPage, Wallet, ContactSheet] {
+            assert_eq!(same.in_units(Units::Inch), same);
+        }
+    }
+
+    #[test]
+    fn units_follow_the_locale_paper() {
+        assert_eq!(
+            units_from_locale("height=279\nwidth=216\npaper-codeset=\"UTF-8\"\n"),
+            Units::Inch
+        );
+        assert_eq!(units_from_locale("height=297\nwidth=210\n"), Units::Metric);
+        assert_eq!(units_from_locale(""), Units::Metric);
+        // The real command answers something this understands.
+        let _ = system_units();
     }
 
     #[test]

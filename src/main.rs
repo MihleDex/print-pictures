@@ -56,7 +56,8 @@ enum Command {
 
 #[derive(clap::Args)]
 struct JobArgs {
-    /// full, 20x25, 13x18, 10x15, 9x13, wallet or contact
+    /// full, wallet, contact; 20x25, 13x18, 10x15, 9x13 (cm); or 8x10in,
+    /// 5x7in, 4x6in, 3.5x5in
     #[arg(long, value_parser = layout_id)]
     layout: LayoutId,
     /// Copies of each picture

@@ -6,7 +6,7 @@ use super::preview::{self, Cache};
 use crate::cups::{self, Printer, SubmitRequest, job_title};
 use crate::image_source::load;
 use crate::job::{Built, Checked, JobError, JobSpec, build_pdf, check_files};
-use crate::layout::Paper;
+use crate::layout::{Paper, Units, system_units};
 use crate::ppd::{PrinterCaps, PrinterOption};
 use crate::settings::Settings;
 use crate::ui::model::{Model, preferred_printer, skipped_notice};
@@ -332,6 +332,7 @@ struct Loaded {
     printers: Result<Vec<Printer>, String>,
     settings: Settings,
     capabilities: Option<(String, PrinterCaps)>,
+    units: Units,
 }
 
 fn read_everything(files: Vec<PathBuf>) -> Loaded {
@@ -347,6 +348,7 @@ fn read_everything(files: Vec<PathBuf>) -> Loaded {
         printers,
         settings,
         capabilities,
+        units: system_units(),
     }
 }
 
@@ -399,7 +401,8 @@ impl Dialog {
             Ok(printers) => (printers, None),
             Err(e) => (Vec::new(), Some(e)),
         };
-        let model = Model::new(loaded.checked, printers, Box::new(caps_of), loaded.settings);
+        let model = Model::new(loaded.checked, printers, Box::new(caps_of), loaded.settings)
+            .with_units(loaded.units);
         Rc::new(Dialog {
             ui,
             model: Rc::new(RefCell::new(model)),

@@ -109,7 +109,7 @@ impl Model { pub fn with_units(self, units: Units) -> Model; } // default Metric
 ```
 Sizes in mm: 203.2×254, 127×177.8, 101.6×152.4, 88.9×127. Captions "8 x 10 in", "5 x 7 in", "4 x 6 in", "3.5 x 5 in", with the count as for the others. `Inch` means the locale paper is 216 × 279.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - Letter (215.9×279.4): counts over `offered(Inch)` are `[1, 1, 2, 2, 4, 9, 35]`; ids are `full, 8x10in, 5x7in, 4x6in, 3.5x5in, wallet, contact`.
   - Paper 101.6×152.4: `P4x6in` has one slot, 101.6×152.4 within 1e-6.
   - `label(P4x6in, letter) == "4 x 6 in (2)"`.
@@ -117,11 +117,11 @@ Sizes in mm: 203.2×254, 127×177.8, 101.6×152.4, 88.9×127. Captions "8 x 10 i
   - `units_from_locale("height=279\nwidth=216\n") == Inch`; `"height=297\nwidth=210\n"` and `""` give `Metric`.
   - A model with `Inch` units and remembered `P13x18`: `layout() == P5x7in` and `layouts()` holds only offered ids. A `Metric` model with remembered `P4x6in` gives `P10x15`.
   - Existing tests that loop over `LayoutId::ALL` for the seven Windows layouts use `offered(Metric)`; `ALL` now holds all eleven.
-- [ ] **Step 2:** `cargo test` → FAIL.
-- [ ] **Step 3: Implement.** `Model::layout()` returns the remembered layout `in_units`; the window builds its model `with_units(system_units())`, read off the UI thread with the printers. Add the new ids to the `--layout` help.
-- [ ] **Step 4:** `cargo test` and clippy → PASS.
-- [ ] **Step 5:** `LC_PAPER=en_US.UTF-8 cargo run -- FILE` lists inch layouts (if that locale is not generated, say so and rely on the tests).
-- [ ] **Step 6:** Commit `feat: inch sizes for Letter-paper systems`.
+- [x] **Step 2:** `cargo test` → FAIL.
+- [x] **Step 3: Implement.** `Model::layout()` returns the remembered layout `in_units`; the window builds its model `with_units(system_units())`, read off the UI thread with the printers. Add the new ids to the `--layout` help.
+- [x] **Step 4:** `cargo test` and clippy → PASS.
+- [x] **Step 5:** `LC_PAPER=en_US.UTF-8 cargo run -- FILE` lists inch layouts (if that locale is not generated, say so and rely on the tests).
+- [x] **Step 6:** Commit `feat: inch sizes for Letter-paper systems`.
 
 ---
 

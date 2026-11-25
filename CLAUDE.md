@@ -77,6 +77,7 @@ The crate is a library plus a thin `main.rs`. One job flows through it like this
 - No network access beyond the local CUPS server. No libadwaita.
 - The user requires it to work on any printer: never special-case one model. A network printer found but not set up gets its queue from `lpoptions -p NAME -l` before its PPD is fetched; that path has not been tried against real hardware.
 - Decoding, PDF building and submission stay off the UI thread, and only the visible page is decoded.
+- A printer on the `cups-pdf:` device gets no driver settings: the window asks where to save and writes the PDF itself.
 
 ## Cases to keep working
 

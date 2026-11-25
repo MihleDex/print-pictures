@@ -43,6 +43,8 @@ Layouts: `full`, `20x25`, `13x18`, `10x15`, `9x13`, `wallet`, `contact`.
 
 ## Good to know
 
+- Choosing a printer that makes PDF files (such as `PDF`) asks where to save
+  when you press Print. The `print` command still saves to `~/PDF`.
 - A picture file that was cut off (a half-copied file) can still open and will
   then print with part of it missing.
 - Large jobs take a while: 200 full A4 pages need about 7 minutes. Closing the

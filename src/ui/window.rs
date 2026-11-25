@@ -5,7 +5,7 @@ use super::options;
 use super::preview::{self, Cache};
 use crate::cups::{self, Printer, SubmitRequest, job_title};
 use crate::image_source::load;
-use crate::job::{Checked, JobError, JobSpec, build_pdf, check_files};
+use crate::job::{Built, Checked, JobError, JobSpec, build_pdf, check_files};
 use crate::layout::Paper;
 use crate::ppd::{PrinterCaps, PrinterOption};
 use crate::settings::Settings;
@@ -15,8 +15,17 @@ use gtk4::prelude::*;
 use gtk4::{gdk, gio, glib, pango};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+
+/// `build_pdf` with its failures worded for the user.
+fn build_for_user(spec: &JobSpec, pdf: &Path) -> Result<Built, String> {
+    build_pdf(spec, pdf).map_err(|e| match e {
+        JobError::NothingToPrint(skipped) if !skipped.is_empty() => skipped_notice(&skipped),
+        e => e.to_string(),
+    })
+}
 
 /// Builds the PDF in `dir` and sends it; returns the pictures left out.
 /// Runs off the UI thread.
@@ -26,15 +35,49 @@ fn print_job(
     dir: &Path,
 ) -> Result<Vec<(PathBuf, String)>, String> {
     let pdf = dir.join("job.pdf");
-    let built = build_pdf(&spec, &pdf).map_err(|e| match e {
-        JobError::NothingToPrint(skipped) if !skipped.is_empty() => skipped_notice(&skipped),
-        e => e.to_string(),
-    })?;
+    let built = build_for_user(&spec, &pdf)?;
     let mut printed = spec.files;
     printed.retain(|f| !built.skipped.iter().any(|(s, _)| s == f));
     request.title = job_title(&printed);
     cups::submit(&request, &pdf).map_err(|e| e.to_string())?;
     Ok(built.skipped)
+}
+
+/// The file to write for the name picked in "Save As". It always ends in
+/// ".pdf", so a picture can never be written over. True when adding that ending
+/// gives a file that exists, which the dialog has not asked about.
+fn pdf_target(chosen: &Path) -> (PathBuf, bool) {
+    if chosen
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+    {
+        return (chosen.to_path_buf(), false);
+    }
+    let mut name = chosen.as_os_str().to_owned();
+    name.push(".pdf");
+    let path = PathBuf::from(name);
+    let exists = path.exists();
+    (path, exists)
+}
+
+/// Builds the PDF in `work` and puts it at `dest`; returns the pictures left out.
+/// Runs off the UI thread.
+fn save_job(spec: JobSpec, work: &Path, dest: &Path) -> Result<Vec<(PathBuf, String)>, String> {
+    let pdf = work.join("job.pdf");
+    let built = build_for_user(&spec, &pdf)?;
+    put(&pdf, dest).map_err(|e| format!("{}: {e}", dest.display()))?;
+    Ok(built.skipped)
+}
+
+/// Copies beside `dest` first, so `dest` is never left half written.
+fn put(from: &Path, dest: &Path) -> std::io::Result<()> {
+    let mut file = tempfile::NamedTempFile::new_in(dest.parent().unwrap_or(Path::new(".")))?;
+    std::io::copy(&mut std::fs::File::open(from)?, &mut file)?;
+    // A document the user saves is readable like any other, unlike a temporary file.
+    let readable = std::fs::Permissions::from_mode(0o644);
+    file.as_file().set_permissions(readable)?;
+    file.persist(dest).map_err(|e| e.error)?;
+    Ok(())
 }
 
 /// A titled dropdown that shows labels and reports ids.
@@ -515,9 +558,60 @@ impl Dialog {
         self.ui.copies.update();
         let copies = self.ui.copies.value_as_int();
         self.model.borrow_mut().set_copies(copies.max(1) as u32);
+        if self.model.borrow().saves_to_file() {
+            return self.ask_where(None);
+        }
         let Some((spec, request)) = self.model.borrow().job() else {
             return;
         };
+        self.run(move |work| print_job(spec, request, work), None);
+    }
+
+    /// "Save As" for a printer that writes files. `existing` reopens it on a file
+    /// so that pressing Save asks about replacing it.
+    fn ask_where(self: &Rc<Self>, existing: Option<PathBuf>) {
+        let chooser = gtk::FileDialog::builder()
+            .title("Save As")
+            .modal(true)
+            .build();
+        match existing {
+            Some(file) => chooser.set_initial_file(Some(&gio::File::for_path(file))),
+            None => {
+                let (folder, name) = self.model.borrow().pdf_suggestion();
+                chooser.set_initial_folder(Some(&gio::File::for_path(folder)));
+                chooser.set_initial_name(Some(&name));
+            }
+        }
+        let dialog = self.clone();
+        chooser.save(
+            Some(&self.ui.window),
+            gio::Cancellable::NONE,
+            move |chosen| {
+                // An error means the box was closed without choosing.
+                let Ok(chosen) = chosen else { return };
+                let Some(path) = chosen.path() else {
+                    return dialog.alert("Choose a folder on this computer.", || {});
+                };
+                let (target, ask_again) = pdf_target(&path);
+                if ask_again {
+                    return dialog.ask_where(Some(target));
+                }
+                let Some((spec, _)) = dialog.model.borrow().job() else {
+                    return;
+                };
+                let folder = target.parent().map(Path::to_path_buf);
+                dialog.run(move |work| save_job(spec, work, &target), folder);
+            },
+        );
+    }
+
+    /// Prints or saves off the UI thread, then closes the window or says what
+    /// went wrong. `saved_to` is the folder to remember when saving.
+    fn run(
+        self: &Rc<Self>,
+        job: impl FnOnce(&Path) -> Result<Vec<(PathBuf, String)>, String> + Send + 'static,
+        saved_to: Option<PathBuf>,
+    ) {
         let dir = match tempfile::tempdir() {
             Ok(dir) => dir,
             Err(e) => return self.alert(&e.to_string(), || {}),
@@ -529,11 +623,14 @@ impl Dialog {
 
         let dialog = self.clone();
         glib::spawn_future_local(async move {
-            let result = gio::spawn_blocking(move || print_job(spec, request, &path)).await;
+            let result = gio::spawn_blocking(move || job(&path)).await;
             dialog.workdir.take();
             let result = result.unwrap_or_else(|_| Err("printing stopped unexpectedly".into()));
             match result {
                 Ok(skipped) => {
+                    if let Some(folder) = saved_to {
+                        dialog.model.borrow_mut().set_pdf_folder(folder);
+                    }
                     if let Err(e) = dialog
                         .model
                         .borrow()
@@ -721,6 +818,7 @@ mod tests {
     use super::*;
     use crate::layout::{LayoutId, Margins, Paper};
     use gdk_pixbuf::{Colorspace, Pixbuf};
+    use std::os::unix::fs::PermissionsExt;
 
     fn job(files: Vec<PathBuf>) -> (JobSpec, SubmitRequest) {
         let spec = JobSpec {
@@ -740,6 +838,70 @@ mod tests {
         (spec, request)
     }
 
+    fn picture_in(dir: &Path) -> PathBuf {
+        let picture = dir.join("ok.png");
+        let pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, 8, 8).unwrap();
+        pixbuf.fill(0);
+        pixbuf.savev(&picture, "png", &[]).unwrap();
+        picture
+    }
+
+    #[test]
+    fn a_name_without_pdf_gets_it_and_never_replaces_silently() {
+        let dir = tempfile::tempdir().unwrap();
+        let at = |name: &str| dir.path().join(name);
+        assert_eq!(pdf_target(&at("a.pdf")), (at("a.pdf"), false));
+        assert_eq!(pdf_target(&at("a.PDF")), (at("a.PDF"), false));
+        assert_eq!(
+            pdf_target(&at("holiday.jpg")),
+            (at("holiday.jpg.pdf"), false)
+        );
+        std::fs::write(at("report.pdf"), "x").unwrap();
+        assert_eq!(pdf_target(&at("report")), (at("report.pdf"), true));
+    }
+
+    #[test]
+    fn saving_writes_the_pdf_where_asked() {
+        let pictures = tempfile::tempdir().unwrap();
+        let work = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let dest = target.path().join("My Photos.pdf");
+        let gone = pictures.path().join("gone.jpg");
+
+        let (spec, _) = job(vec![gone.clone()]);
+        assert_eq!(
+            save_job(spec, work.path(), &dest).unwrap_err(),
+            "Skipped: gone.jpg"
+        );
+        assert!(!dest.exists());
+
+        let (spec, _) = job(vec![picture_in(pictures.path()), gone]);
+        let skipped = save_job(spec, work.path(), &dest).unwrap();
+        assert_eq!(skipped.len(), 1);
+        assert!(std::fs::read(&dest).unwrap().starts_with(b"%PDF"));
+        let mode = std::fs::metadata(&dest).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o644);
+        let files = std::fs::read_dir(target.path()).unwrap().count();
+        assert_eq!(files, 1, "no temporary file left");
+    }
+
+    #[test]
+    fn a_folder_that_cannot_be_written_gives_a_message() {
+        let pictures = tempfile::tempdir().unwrap();
+        let work = tempfile::tempdir().unwrap();
+        let target = tempfile::tempdir().unwrap();
+        let (spec, _) = job(vec![picture_in(pictures.path())]);
+        let set = |mode| {
+            let permissions = std::fs::Permissions::from_mode(mode);
+            std::fs::set_permissions(target.path(), permissions).unwrap();
+        };
+        set(0o500);
+        let result = save_job(spec, work.path(), &target.path().join("x.pdf"));
+        set(0o700);
+        let message = result.unwrap_err();
+        assert!(message.contains("x.pdf"), "{message}");
+    }
+
     // Neither case sends anything, so no printer is needed.
     #[test]
     fn failures_come_back_as_messages_for_the_user() {
@@ -748,11 +910,7 @@ mod tests {
         let message = print_job(spec, request, dir.path()).unwrap_err();
         assert_eq!(message, "Skipped: gone.jpg");
 
-        let picture = dir.path().join("ok.png");
-        let pixbuf = Pixbuf::new(Colorspace::Rgb, false, 8, 8, 8).unwrap();
-        pixbuf.fill(0);
-        pixbuf.savev(&picture, "png", &[]).unwrap();
-        let (spec, request) = job(vec![picture]);
+        let (spec, request) = job(vec![picture_in(dir.path())]);
         let message = print_job(spec, request, dir.path()).unwrap_err();
         assert!(message.contains("does not exist"), "{message}");
     }

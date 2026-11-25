@@ -80,14 +80,14 @@ pub fn uninstall(folders: &Folders) -> Result<(), InstallError>;
 
 Exact strings: title "Print Pictures"; text "Select pictures in your file manager, right-click them and choose Print."; button "Add Print to the right-click menu", or "Remove Print from the right-click menu" when it is there; after a change "Done. Close and reopen your file manager."; button "Close". Without Thunar there is no add/remove button.
 
-- [ ] **Step 1: Write the failing tests** (`#[gtk4::test] #[ignore = "needs a display"]`, finding widgets as `ui/options.rs` tests do, with a temporary `config`):
+- [x] **Step 1: Write the failing tests** (`#[gtk4::test] #[ignore = "needs a display"]`, finding widgets as `ui/options.rs` tests do, with a temporary `config`):
   - `welcome_adds_and_removes`: pressing "Add…" makes `has_thunar` true, shows the "Done." line and relabels the button to "Remove…"; pressing it again reverses this.
   - `welcome_without_thunar`: no button with either label.
   - `welcome_reports_a_broken_file`: with `uca.xml` = `<broken>`, pressing "Add…" shows a message containing "uca.xml" and the file still reads `<broken>`.
-- [ ] **Step 2:** `cargo test --lib welcome -- --ignored` → FAIL.
-- [ ] **Step 3: Implement.** The system file is `/etc/xdg/Thunar/uca.xml`.
-- [ ] **Step 4:** `cargo test --lib welcome -- --ignored`, `cargo test` and clippy → PASS.
-- [ ] **Step 5:** Commit `feat: welcome window`.
+- [x] **Step 2:** `cargo test --lib welcome -- --ignored` → FAIL.
+- [x] **Step 3: Implement.** The system file is `/etc/xdg/Thunar/uca.xml`.
+- [x] **Step 4:** `cargo test --lib welcome -- --ignored`, `cargo test` and clippy → PASS.
+- [x] **Step 5:** Commit `feat: welcome window`.
 
 ---
 

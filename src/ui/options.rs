@@ -147,6 +147,7 @@ mod tests {
     use crate::job::Checked;
     use crate::ppd;
     use crate::settings::Settings;
+    use crate::ui::testing::find;
     use std::cell::Cell;
 
     fn model() -> Model {
@@ -163,21 +164,6 @@ mod tests {
         let caps =
             |_: &str| ppd::parse(include_str!("../../tests/fixtures/photo-printer.ppd")).unwrap();
         Model::new(checked, printers, Box::new(caps), Settings::default())
-    }
-
-    /// The first widget of type `T` under `root` that `wanted` accepts.
-    fn find<T: IsA<gtk::Widget>>(root: &gtk::Widget, wanted: &dyn Fn(&T) -> bool) -> Option<T> {
-        if let Some(found) = root.downcast_ref::<T>().filter(|w| wanted(w)) {
-            return Some(found.clone());
-        }
-        let mut child = root.first_child();
-        while let Some(widget) = child {
-            if let Some(found) = find(&widget, wanted) {
-                return Some(found);
-            }
-            child = widget.next_sibling();
-        }
-        None
     }
 
     fn open_window(title: &str) -> gtk::Widget {

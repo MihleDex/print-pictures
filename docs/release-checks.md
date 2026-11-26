@@ -4,7 +4,7 @@ Tick each one after doing it. None of these can be done by the tests.
 
 ## First
 
-- [ ] Rename the repository on GitHub to `print-pictures` (Settings → General).
+- [x] Rename the repository on GitHub to `print-pictures` (Settings → General).
       Every link in the files points there, so do this before merging into
       `main` or tagging. Then run
       `git remote set-url origin git@github.com:MihleDex/print-pictures.git`.
